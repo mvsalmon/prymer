@@ -15,6 +15,7 @@ def prymer_main():
     parser.add_argument('-l',
                         '--template_sequence_length',
                         help='Length of template sequence in bp to use for primer design. Default 500bp',
+                        type=int,
                         default=500)
     parser.add_argument('-r',
                         '--reference_genome',
