@@ -13,7 +13,7 @@ class Primer():
     def __init__(self, coordinates, ref_genome='hg38', seq_len=500):
 
         if len(coordinates) == 1:
-            self.parsed_coordinate = self._parse_coordinate(coordinates[0], ref_genome, seq_len, pair = False)
+            self.parsed_coordinate = self._parse_coordinate(coordinates[0], ref_genome, seq_len)
             self.sequence_data = self._UCSC_request(self.parsed_coordinate)
             self.primers = self._design_primers(self.sequence_data['dna'])
 
@@ -29,7 +29,7 @@ class Primer():
             pass
 
 
-    def _parse_coordinate(self, coord, ref_genome, seq_len, pair = False):
+    def _parse_coordinate(self, coord, ref_genome, seq_len, pair = None):
         """Parse provided genomic coordinate for use in UCSC API request. Start and end positions are caluclated
         from the given coordinates, which is assumed to be the center of the desired amplicon.
         Coordinate must be in the format chr1:234,567,890.
