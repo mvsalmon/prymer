@@ -10,16 +10,19 @@ class Primer():
     For two coordinates (i.e. fusion), each coordinate should represent the breakpoint, and will be either the
     start or end position of the returned sequence."""
 
-    def __init__(self, coordinates, ref_genome='hg38', seq_len=500):
+    def __init__(self, args):
+        self.coordinates = args.coordinates
+        self.ref_genome = args.reference_genome
+        self.template_sequence_length = args.template_sequence_length
 
-        if len(coordinates) == 1:
-            self.parsed_coordinate = self._parse_coordinate(coordinates[0], ref_genome, seq_len)
+        if len(self.coordinates) == 1:
+            self.parsed_coordinate = self._parse_coordinate(self.coordinates[0])
             self.sequence_data = self._UCSC_request(self.parsed_coordinate)
             self.primers = self._design_primers(self.sequence_data['dna'])
 
-        elif len(coordinates) == 2:
-            self.parsed_lef_coordinate = self._parse_coordinate(coordinates[0], ref_genome, seq_len * -1, pair = 'left')
-            self.parsed_right_coordinate = self._parse_coordinate(coordinates[1], ref_genome, seq_len, pair = 'right')
+        elif len(self.coordinates) == 2:
+            self.parsed_lef_coordinate = self._parse_coordinate(self.coordinates[0], pair = 'left')
+            self.parsed_right_coordinate = self._parse_coordinate(self.coordinates[1], pair = 'right')
             self.left_sequence_data = self._UCSC_request(self.parsed_lef_coordinate)
             self.right_sequence_data = self._UCSC_request(self.parsed_right_coordinate)
 
@@ -29,24 +32,24 @@ class Primer():
             pass
 
 
-    def _parse_coordinate(self, coord, ref_genome, seq_len, pair = None):
+    def _parse_coordinate(self, coord, pair = None):
         """Parse provided genomic coordinate for use in UCSC API request. Start and end positions are caluclated
         from the given coordinates, which is assumed to be the center of the desired amplicon.
         Coordinate must be in the format chr1:234,567,890.
         Pass a negative integer for downstream end position"""
 
         coordinate = coord.lower().split(sep=":")
-        # if a single coordinate has been given, start postion is seq_len/2.
+        # if a single coordinate has been given, start postion is self.template_sequence_length/2.
         if not pair:
-            coordinate[1] = int(coordinate[1]) - round(seq_len/2)
-            coordinate.append(coordinate[1] + seq_len)
+            coordinate[1] = int(coordinate[1]) - round(self.template_sequence_length/2)
+            coordinate.append(coordinate[1] + self.template_sequence_length)
         elif pair == 'left':
-            coordinate[1] = int(coordinate[1]) + seq_len
-            coordinate.append(coordinate[1] + -seq_len)
+            coordinate[1] = int(coordinate[1]) + self.template_sequence_length * -1
+            coordinate.append(coordinate[1] + self.template_sequence_length)
         elif pair == 'right':
-            coordinate.append(int(coordinate[1]) + seq_len)
+            coordinate.append(int(coordinate[1]) + self.template_sequence_length)
 
-        coordinate.append(ref_genome)
+        coordinate.append(self.ref_genome)
         coordinate = dict(zip(['chrom', 'start', 'end', 'genome'], coordinate))
         print(coordinate)
         return coordinate
