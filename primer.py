@@ -1,6 +1,6 @@
 import requests
 import primer3
-
+import pandas as pd
 
 class Primer():
     """Class to manage primer objects.
@@ -19,6 +19,8 @@ class Primer():
             self.parsed_coordinate = self._parse_coordinate(self.coordinates[0])
             self.sequence_data = self._UCSC_request(self.parsed_coordinate)
             self.primers = self._design_primers(self.sequence_data['dna'])
+            print(self.primers['PAIR_0'])
+            print(pd.DataFrame.from_dict(self.primers['PAIR_0']))
 
         elif len(self.coordinates) == 2:
             self.parsed_lef_coordinate = self._parse_coordinate(self.coordinates[0], pair = 'left')

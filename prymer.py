@@ -29,8 +29,8 @@ def prymer_main():
 
 
 
-# coord1 = ["Chr5:12345678"]
-# coord2 = ["Chr5:12345678", "Chr7:12345678"]
+# coord1 = "Chr5:12345678"
+# coord2 = "Chr5:12345678", "Chr7:12345678"
 #
 # test_breakpoint_primers = Primer(args.coordinates)
 # print(test_primer.sequence_data)
