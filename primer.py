@@ -19,8 +19,8 @@ class Primer():
             self.parsed_coordinate = self._parse_coordinate(self.coordinates[0])
             self.sequence_data = self._UCSC_request(self.parsed_coordinate)
             self.primers = self._design_primers(self.sequence_data['dna'])
-            print(self.primers['PAIR_0'])
-            print(pd.DataFrame.from_dict(self.primers['PAIR_0']))
+            print(self.primers)
+            print(pd.DataFrame.from_dict(self.primers))
 
         elif len(self.coordinates) == 2:
             self.parsed_lef_coordinate = self._parse_coordinate(self.coordinates[0], pair = 'left')
@@ -93,5 +93,10 @@ class Primer():
                 parsed[pair_id][key] = value
             else:
                 parsed[pair_id][key] = value
+        # TODO separate this into new function. Need to think about dict key names to get more readable output df.
+        primer_info = {}
+        for key, value in parsed.items():
+            if key.split(sep="_")[1] in ['0','1','2','3','4','5']:
+                primer_info[key] = parsed[key]
 
-        return parsed
+        return primer_info
