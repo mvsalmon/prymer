@@ -1,7 +1,7 @@
 import requests
 import primer3
 import pandas as pd
-
+import json
 class Primer():
     """Class to manage primer objects.
     seq_len = length of sequence in bp that will be returned from UCSC query. Value will be used to calculate the start
@@ -14,14 +14,17 @@ class Primer():
         self.coordinates = args.coordinates
         self.ref_genome = args.reference_genome
         self.template_sequence_length = args.template_sequence_length
+        self.output_file_name = args.output_file
 
+        # process single coordinate
         if len(self.coordinates) == 1:
             self.parsed_coordinate = self._parse_coordinate(self.coordinates[0])
             self.sequence_data = self._UCSC_request(self.parsed_coordinate)
             self.primers = self._design_primers(self.sequence_data['dna'])
             print(self.primers)
             print(pd.DataFrame.from_dict(self.primers))
-
+            self._write_output()
+        # process pair of coordinates
         elif len(self.coordinates) == 2:
             self.parsed_lef_coordinate = self._parse_coordinate(self.coordinates[0], pair = 'left')
             self.parsed_right_coordinate = self._parse_coordinate(self.coordinates[1], pair = 'right')
@@ -100,3 +103,9 @@ class Primer():
                 primer_info[key] = parsed[key]
 
         return primer_info
+
+    def _write_output(self):
+        """Save primer3 outpyt to file"""
+
+        with open(self.output_file_name, "w") as out_file:
+            json.dump(self.primers, out_file, indent=3)
