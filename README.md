@@ -2,15 +2,15 @@
 A python script to automate PCR primer design. Under development
 
 # Usage
-prymer.py -c <genomic coordinates>
+prymer.py -c _genomic coordinate(s)_
 
           -c Required. One or two genomic coordinates in the format "chr1:2345678, chr8:7654321"
 
-          -l desired template sequence length in bp. Default 500
+          -l Optional. Desired template sequence length in bp. Default 500
 
-          -r ref genome to use. Default hg38
+          -r Optional. Reference genome to use. Default hg38
 
-          -o output filepath. Default prymer.txt
+          -o Optional. Output file. Default prymer.txt
 
 # Details
 The script will use the provided coordinates to retrieve the surrounding genomic sequence from the UCSC database and 
