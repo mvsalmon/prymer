@@ -3,7 +3,7 @@
 # TODO error handling
 import argparse
 
-from primer import Primer
+from primerClass import Primer
 
 def prymer_main():
     parser = argparse.ArgumentParser(description='Design PCR primers for given genomic coordinates')

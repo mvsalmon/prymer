@@ -23,7 +23,8 @@ class Primer():
             self.primers = self._design_primers(self.sequence_data['dna'])
             print(self.primers)
             print(pd.DataFrame.from_dict(self.primers))
-            self._write_output()
+            self._write_output(self.primers)
+
         # process pair of coordinates
         elif len(self.coordinates) == 2:
             self.parsed_lef_coordinate = self._parse_coordinate(self.coordinates[0], pair = 'left')
@@ -33,6 +34,7 @@ class Primer():
 
             self.breakpoint_sequence_template = self._build_breakpoint()
             self.breakpoint_primers = self._design_breakpoint_primers()
+            self._write_output(self.breakpoint_primers)
             # TODO handle two coordinates for fusions
             pass
 
@@ -68,11 +70,13 @@ class Primer():
         print(response.url)
         return response.json()
 
-    def _design_primers(self, template_sequence):
+    def _design_primers(self, template_sequence, sequence_target=[]):
         """design PCR primers using primer3 with default options"""
         # TODO primer design options?
         primers = primer3.design_primers(
-            seq_args={'SEQUENCE_ID': 'test', 'SEQUENCE_TEMPLATE': template_sequence},
+            seq_args={'SEQUENCE_ID': 'test',
+                      'SEQUENCE_TEMPLATE': template_sequence,
+                      'SEQUENCE_TARGET': sequence_target},
             global_args={})
         parsed_primers = self._parse_primer3(primers)
         return parsed_primers
@@ -82,7 +86,13 @@ class Primer():
         return breakpoint_sequence
     def _design_breakpoint_primers(self):
         """concatenate two sequences either side of a breakpoint to use as template"""
-        primers = self._design_primers(self.breakpoint_sequence_template)
+        # define target region in breakpoint sequence to be 10bp either side of break.
+        # this could be user defined later.
+        target_length = 20
+        target_start = self.template_sequence_length - round(target_length/2)
+        sequence_target = [target_start, target_length]
+
+        primers = self._design_primers(self.breakpoint_sequence_template, sequence_target)
         return primers
 
     def _parse_primer3(self, primer3_output):
@@ -104,8 +114,8 @@ class Primer():
 
         return primer_info
 
-    def _write_output(self):
+    def _write_output(self, primer_data):
         """Save primer3 outpyt to file"""
 
         with open(self.output_file_name, "w") as out_file:
-            json.dump(self.primers, out_file, indent=3)
+            json.dump(primer_data, out_file, indent=2)
