@@ -16,9 +16,9 @@ class Primer():
     For two coordinates (i.e. fusion), each coordinate should represent the breakpoint, and will be either the
     start or end position of the returned sequence."""
 
-    def __init__(self, start_pos, end_pos = None, ref_genome = 'hg38', seq_len = 500):
-        self.start_pos = start_pos
-        self.end_pos = end_pos
+    def __init__(self, start_coordinate, end_coordinate = None, ref_genome = 'hg38', seq_len = 500):
+        self.start_coordinate = start_coordinate
+        self.end_coordinate = end_coordinate
         self.ref_genome = ref_genome
         self.seq_len = seq_len
 
@@ -26,11 +26,14 @@ class Primer():
         # self.ref_genome = args.reference_genome
         # self.template_sequence_length = args.template_sequence_length
 
-        if self.end_pos is None:
+        if self.end_coordinate is None:
             try:
                 self.sequence = self._UCSC_request()
             except ChromMismatch as error:
                 print(error)
+            except requests.exceptions.HTTPError as error:
+                print(error)
+                exit(1)
 
 
             self.parsed_coordinate = self._parse_coordinate(self.coordinates[0])
@@ -83,9 +86,9 @@ class Primer():
 
         # Handle two coordinates on same chromosome
         # break point coordinates will need 2 API requests - make new function for this.
-        if self.end_pos:
-            end_chrom, end = self.end_pos.split(":")
-            start_chrom, start = self.start_pos.split(":")
+        if self.end_coordinate:
+            end_chrom, end = self.end_coordinate.split(":")
+            start_chrom, start = self.start_coordinate.split(":")
             # check both coords are on the same chromosome
             if start_chrom != end_chrom:
                 raise ChromMismatch("Start and end positions for non-fusions must be on the same chromsome")
@@ -96,21 +99,24 @@ class Primer():
         else:
             # request for single coordinate
             # modify start and end coordinates to be in center of a sequence with length defined by seq_len
-            chrom, start = self.start_pos.split(":")
+            chrom, start = self.start_coordinate.split(":")
             # given coordinate will be in the center of the returned sequence
             flanking_len = round(self.seq_len/2)
-            end = start + flanking_len
-            start = start - flanking_len
+            end = int(start) + flanking_len
+            start = int(start) - flanking_len
 
             url = f"https://api.genome.ucsc.edu/getData/sequence?genome={self.ref_genome};chrom={chrom};start={start};end={end}"
 
         response = requests.get(url)
 
-        if response.ok:
-            print(response.url)
-            return response.json()
-        else:
-            raise BadRequest(f"API request failed with status {response_status_here}")
+        response.raise_for_status()
+
+        print(response.url)
+        return response.json()
+
+
+        # else:
+        #     raise BadRequest(f"API request failed with status {response status here}")
 
     def _design_primers(self, template_sequence):
         """design PCR primers using primer3 with default options"""
@@ -154,16 +160,16 @@ class ChromMismatch(Exception):
     '''raise this if start and end chroms are different in non-breakpoint situation'''
     pass
 
-class BadRequest(Exception):
-    '''raise this if API request fails'''
-    pass
 def prymer_main():
     parser = argparse.ArgumentParser(description='Design PCR primers for given genomic coordinates')
     parser.add_argument('-c',
-                        '--coordinates',
-                        help='Genomic coordinates in the format chr1:23456',
-                        required=True,
-                        nargs='*')
+                        '--start_coordinate',
+                        help='Genomic coordinate for primer design in the format chr1:23456',
+                        required=True)
+    parser.add_argument('-e',
+                        '--end_coordinate',
+                        help='Optional second genomic coordinate for primer design. Required if -f is used. Default None.',
+                        default=None)
     parser.add_argument('-l',
                         '--template_sequence_length',
                         help='Length of template sequence in bp to use for primer design. Default 500bp',
@@ -171,13 +177,19 @@ def prymer_main():
                         default=500)
     parser.add_argument('-r',
                         '--reference_genome',
-                        help='Reference genome to use. Default hg38',
+                        help='Reference genome to use. Must be valid genome that can be used with UCSC API. Default hg38',
                         default='hg38')
     args = parser.parse_args()
 
 
-    primer = Primer()
+    primer = Primer(start_coordinate = args.start_coordinate,
+                    end_coordinate = args.end_coordinate,
+                    ref_genome = args.reference_genome,
+                    seq_len = args.template_sequence_length)
+
     return primer
+
+
 
 
 
