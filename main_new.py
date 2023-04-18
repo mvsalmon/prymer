@@ -16,7 +16,7 @@ class Primer():
     For two coordinates (i.e. fusion), each coordinate should represent the breakpoint, and will be either the
     start or end position of the returned sequence."""
 
-    def __init__(self, start_coordinate, end_coordinate = None, ref_genome = 'hg38', seq_len = 500):
+    def __init__(self, start_coordinate = None, end_coordinate = None, ref_genome = 'hg38', seq_len = 500):
         self.start_coordinate = start_coordinate
         self.end_coordinate = end_coordinate
         self.ref_genome = ref_genome
@@ -24,19 +24,18 @@ class Primer():
 
         # requests for coords on same chrom
         try:
-            self.sequence = self._UCSC_request()
+            self.UCSC_response = self._UCSC_request()
         except ChromMismatch as error:
             print(error)
             exit(1)
-        except requests.exceptions.HTTPError as error:
-            print(error)
-            exit(1)
 
-        self.parsed_coordinate = self._parse_coordinate(self.coordinates[0])
-        self.sequence_data = self._UCSC_request(self.parsed_coordinate)
-        self.primers = self._design_primers(self.sequence_data['dna'])
-        print(self.primers)
-        print(pd.DataFrame.from_dict(self.primers))
+        print(self.UCSC_response)
+
+        # self.parsed_coordinate = self._parse_coordinate(self.coordinates[0])
+        # self.sequence_data = self._UCSC_request(self.parsed_coordinate)
+        # self.primers = self._design_primers(self.sequence_data['dna'])
+        # print(self.primers)
+        # print(pd.DataFrame.from_dict(self.primers))
 
         # elif len(self.coordinates) == 2:
         #     self.parsed_left_coordinate = self._parse_coordinate(self.coordinates[0], pair = 'left')
@@ -101,14 +100,14 @@ class Primer():
 
         response = requests.get(url)
 
-        response.raise_for_status()
+        try:
+            response.raise_for_status()
+        except requests.exceptions.HTTPError as error:
+            print(error)
+            exit(1)
 
         print(response.url)
         return response.json()
-
-
-        # else:
-        #     raise BadRequest(f"API request failed with status {response status here}")
 
     def _design_primers(self, template_sequence):
         """design PCR primers using primer3 with default options"""
