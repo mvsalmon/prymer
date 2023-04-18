@@ -97,8 +97,9 @@ class Primer():
         return coordinate
 
     def UCSC_request(self, start_coordinate, end_coordinate=None, breakpoint_position=None):
-        """Requests sequence data from UCSC using given coordinate. Returns json."""
-        # Handle two coordinates on same chromosome
+        """Handles different sets of coordinates (eg, single, pair, fusion), then
+         parses and requests sequence data from UCSC. Returns json."""
+        # two coordinates on same chromosome
         if end_coordinate:
             end_chrom, end = end_coordinate.split(":")
             start_chrom, start = start_coordinate.split(":")
@@ -111,7 +112,8 @@ class Primer():
         elif not breakpoint_position:
             # request for single coordinate
             chrom, start = start_coordinate.split(":")
-            # given coordinate will be in the center of the returned sequence, so adjust start and end position by seq_len/2
+            # given coordinate will be in the center of the returned sequence,
+            # so adjust start and end position by seq_len/2
             flanking_len = round(self.seq_len/2)
             end = int(start) + flanking_len
             start = int(start) - flanking_len
