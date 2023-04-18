@@ -30,10 +30,10 @@ class Primer():
 
         self._run()
 
-        # requests for coords on same chrom
+
     def _run(self):
         """Main program control"""
-        # single or pair of non-fusion coordinate primers
+        # single or pair of non-fusion (i.e. on same chrom) coordinate primers
         if not self.fusion_breakpoint:
             try:
                 # raise exception if both coordinates are on different chroms.
@@ -105,7 +105,8 @@ class Primer():
             start_chrom, start = start_coordinate.split(":")
             # check both coords are on the same chromosome and fusion primers are not required
             if start_chrom != end_chrom:
-                raise ChromMismatch(f"Error! Coordinates must be on the same chromosome. {start_chrom} and {end_chrom} supplied.")
+                raise ChromMismatch(f"Error! {start_coordinate} and {end_coordinate} are on different chromosomes. "
+                                    f"Specify the same chromosome or use --fusion_breakpoint.")
 
             url = f"https://api.genome.ucsc.edu/getData/sequence?genome={self.ref_genome};chrom={start_chrom};start={start};end={end}"
 
@@ -142,8 +143,6 @@ class Primer():
         print(response.url)
         return response.json()
 
-    def UCSC_fusion_request(self, breakpoint_position):
-        """UCSC reqeust for fusion primers with logic for handling start and end points"""
     def design_primers(self, template_sequence):
         """design PCR primers using primer3 with default options"""
         # TODO primer design options?
