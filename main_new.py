@@ -16,27 +16,46 @@ class Primer():
     For two coordinates (i.e. fusion), each coordinate should represent the breakpoint, and will be either the
     start or end position of the returned sequence."""
 
-    def __init__(self, start_coordinate = None, end_coordinate = None, ref_genome = 'hg38', seq_len = 500):
+    def __init__(self, start_coordinate=None,
+                 end_coordinate=None,
+                 ref_genome='hg38',
+                 seq_len=500,
+                 fusion_breakpoint=False):
+
         self.start_coordinate = start_coordinate
         self.end_coordinate = end_coordinate
         self.ref_genome = ref_genome
         self.seq_len = seq_len
+        self.fusion_breakpoint = fusion_breakpoint
+
+        self._run()
 
         # requests for coords on same chrom
-        if self.start_coordinate is not None:
+    def _run(self):
+        """Main program control"""
+        # single or pair of non-fusion coordinate primers
+        if not self.fusion_breakpoint:
             try:
-                self.UCSC_response = self._UCSC_request()
-                self.template_sequence = self.UCSC_response["dna"]
+                # raise exception if both coordinates are on different chroms.
+                self.UCSC_response = self.UCSC_request(self.start_coordinate, self.end_coordinate)
             except ChromMismatch as error:
                 print(error)
                 exit(1)
-
+            # store template sequence from API request
+            self.template_sequence = self.UCSC_response["dna"]
             print(self.UCSC_response["dna"])
-            self.primers = self._design_primers(self.template_sequence)
+            # design primers
+            self.primers = self.design_primers(self.template_sequence)
             print(self.primers)
 
-        # self.parsed_coordinate = self._parse_coordinate(self.coordinates[0])
-        # self.sequence_data = self._UCSC_request(self.parsed_coordinate)
+        # fusion breakpoint primers. Must be a pair. Call UCSC API request for each breakpoint.
+        if self.fusion_breakpoint and self.end_coordinate:
+            self.UCSC_start_breakpoint_response = self.UCSC_request(self.start_coordinate, breakpoint_position="5'")
+            print(self.UCSC_start_breakpoint_response)
+            self.UCSC_end_breakpoint_response = self.UCSC_request(self.end_coordinate, breakpoint_position="3'")
+            print(self.UCSC_end_breakpoint_response)
+            # concatenate sequence at each breakpoint
+            self.breakpoint_sequence = self._build_breakpoint()
         # self.primers = self._design_primers(self.sequence_data['dna'])
         # print(self.primers)
         # print(pd.DataFrame.from_dict(self.primers))
@@ -54,7 +73,7 @@ class Primer():
         # TODO handle two coordinates for fusions
         #     pass
 
-
+    # _parse_coordinates no longer used - to delete
     def _parse_coordinate(self, coord, pair = None):
         """Parse provided genomic coordinate for use in UCSC API request. Start and end positions are caluclated
         from themain.py given coordinates, which is assumed to be the center of the desired amplicon.
@@ -77,33 +96,41 @@ class Primer():
         print(coordinate)
         return coordinate
 
-    def _UCSC_request(self):
+    def UCSC_request(self, start_coordinate, end_coordinate=None, breakpoint_position=None):
         """Requests sequence data from UCSC using given coordinate. Returns json."""
-
         # Handle two coordinates on same chromosome
-        # break point coordinates will need 2 API requests - make new function for this?
-        if self.end_coordinate:
-            end_chrom, end = self.end_coordinate.split(":")
-            start_chrom, start = self.start_coordinate.split(":")
-            # check both coords are on the same chromosome
+        if end_coordinate:
+            end_chrom, end = end_coordinate.split(":")
+            start_chrom, start = start_coordinate.split(":")
+            # check both coords are on the same chromosome and fusion primers are not required
             if start_chrom != end_chrom:
                 raise ChromMismatch(f"Error! Coordinates must be on the same chromosome. {start_chrom} and {end_chrom} supplied.")
 
             url = f"https://api.genome.ucsc.edu/getData/sequence?genome={self.ref_genome};chrom={start_chrom};start={start};end={end}"
 
-        else:
+        elif not breakpoint_position:
             # request for single coordinate
-            # modify start and end coordinates to be in center of a sequence with length defined by seq_len
-            chrom, start = self.start_coordinate.split(":")
-            # given coordinate will be in the center of the returned sequence
+            chrom, start = start_coordinate.split(":")
+            # given coordinate will be in the center of the returned sequence, so adjust start and end position by seq_len/2
             flanking_len = round(self.seq_len/2)
             end = int(start) + flanking_len
             start = int(start) - flanking_len
+            url = f"https://api.genome.ucsc.edu/getData/sequence?genome={self.ref_genome};chrom={chrom};start={start};end={end}"
+
+        else:
+            # request for breakpoint primers
+            # adjust start or end position for 5'/3' break as required
+            if breakpoint_position == "5'":
+                chrom, end = start_coordinate.split(":")
+                start = int(end) - self.seq_len
+            elif breakpoint_position == "3'":
+                chrom, start = start_coordinate.split(":")
+                end = int(start) + self.seq_len
 
             url = f"https://api.genome.ucsc.edu/getData/sequence?genome={self.ref_genome};chrom={chrom};start={start};end={end}"
 
+        # make API request and check ok
         response = requests.get(url)
-
         try:
             response.raise_for_status()
         except requests.exceptions.HTTPError as error:
@@ -113,7 +140,9 @@ class Primer():
         print(response.url)
         return response.json()
 
-    def _design_primers(self, template_sequence):
+    def UCSC_fusion_request(self, breakpoint_position):
+        """UCSC reqeust for fusion primers with logic for handling start and end points"""
+    def design_primers(self, template_sequence):
         """design PCR primers using primer3 with default options"""
         # TODO primer design options?
         primers = primer3.design_primers(
@@ -124,7 +153,8 @@ class Primer():
 
     def _build_breakpoint(self):
         '''concantenate breakpoint sequences'''
-        breakpoint_sequence = ''.join([self.left_sequence_data['dna'], self.right_sequence_data['dna']])
+        breakpoint_sequence = ''.join([self.UCSC_start_breakpoint_response['dna'],
+                                       self.UCSC_end_breakpoint_response['dna']])
         return breakpoint_sequence
     def _design_breakpoint_primers(self):
         """placeholder for possible future fusion stuff"""
@@ -159,11 +189,14 @@ def prymer_main():
     parser = argparse.ArgumentParser(description='Design PCR primers for given genomic coordinates')
     parser.add_argument('-c',
                         '--start_coordinate',
-                        help='Genomic coordinate for primer design in the format chr1:23456',
+                        help="Genomic coordinate for primer design in the format chr1:23456. "
+                             "If --fusion_breakpoint is used, this should be the 5' breakpoint",
                         required=True)
     parser.add_argument('-e',
                         '--end_coordinate',
-                        help='Optional second genomic coordinate for primer design. Required if -f is used. Default None.',
+                        help="Optional second genomic coordinate for primer design. Default None."
+                             "If --fusion_breakpoint is used, this is required and should be the " 
+                             "3' breakpoint.",
                         default=None)
     parser.add_argument('-l',
                         '--template_sequence_length',
@@ -174,13 +207,17 @@ def prymer_main():
                         '--reference_genome',
                         help='Reference genome to use. Must be valid genome that can be used with UCSC API. Default hg38',
                         default='hg38')
+    parser.add_argument('-f',
+                        '--fusion_breakpoint',
+                        help="Specifies if primers must span a fusion breakpoint.",
+                        action="store_true")
     args = parser.parse_args()
 
-
-    primer = Primer(start_coordinate = args.start_coordinate,
-                    end_coordinate = args.end_coordinate,
-                    ref_genome = args.reference_genome,
-                    seq_len = args.template_sequence_length)
+    primer = Primer(start_coordinate=args.start_coordinate,
+                    end_coordinate=args.end_coordinate,
+                    ref_genome=args.reference_genome,
+                    seq_len=args.template_sequence_length,
+                    fusion_breakpoint=args.fusion_breakpoint)
 
     return primer
 
