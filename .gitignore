@@ -1,2 +1,5 @@
 designDoc
-test*
+models
+notebooks
+tests.sh
+test.py
