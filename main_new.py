@@ -23,13 +23,17 @@ class Primer():
         self.seq_len = seq_len
 
         # requests for coords on same chrom
-        try:
-            self.UCSC_response = self._UCSC_request()
-        except ChromMismatch as error:
-            print(error)
-            exit(1)
+        if self.start_coordinate is not None:
+            try:
+                self.UCSC_response = self._UCSC_request()
+                self.template_sequence = self.UCSC_response["dna"]
+            except ChromMismatch as error:
+                print(error)
+                exit(1)
 
-        print(self.UCSC_response)
+            print(self.UCSC_response["dna"])
+            self.primers = self._design_primers(self.template_sequence)
+            print(self.primers)
 
         # self.parsed_coordinate = self._parse_coordinate(self.coordinates[0])
         # self.sequence_data = self._UCSC_request(self.parsed_coordinate)
