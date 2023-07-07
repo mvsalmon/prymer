@@ -45,7 +45,10 @@ class Primer():
             self.template_sequence = self.UCSC_response["dna"]
             print(self.UCSC_response["dna"])
             # design primers
-            self.primers = self.design_primers(self.template_sequence)
+            self.primers = self.design_primers(
+                SEQUENCE_ID="test",
+                SEQUENCE_TEMPLATE=self.template_sequence,
+                )
             print(self.primers)
 
         # fusion breakpoint primers. Must be a pair. Call UCSC API request for each breakpoint.
@@ -75,7 +78,7 @@ class Primer():
         #     pass
 
     # _parse_coordinates no longer used - to delete
-    def _parse_coordinate(self, coord, pair = None):
+    def _parse_coordinate(self, coord, pair=None):
         """Parse provided genomic coordinate for use in UCSC API request. Start and end positions are caluclated
         from themain.py given coordinates, which is assumed to be the center of the desired amplicon.
         Coordinate must be in the format chr1:234,567,890.
@@ -144,6 +147,7 @@ class Primer():
         print(response.url)
         return response.json()
 
+
     def design_primers(self, template_sequence):
         """design PCR primers using primer3 with default options"""
         # TODO primer design options?
@@ -159,7 +163,13 @@ class Primer():
                                        self.UCSC_end_breakpoint_response['dna']])
         return breakpoint_sequence
     def _design_breakpoint_primers(self):
-        """placeholder for possible future fusion stuff"""
+        """placeholder for possible future fusion stuff
+        Use to design breakpoint primers. Need to set primer3 to include predicted breakpoint.
+        By setting SEQUENCE_TARGET in primer3 seq_argsUse
+        template_seq_len to find where breakpoints join?"""
+
+        #define template sequnce that should be included in the amplicon
+
         #primers = self._design_primers(self.breakpoint_sequence_template)
         #return primers
         pass
