@@ -30,10 +30,10 @@ class Primer():
 
         self._run()
 
-        # requests for coords on same chrom
+
     def _run(self):
         """Main program control"""
-        # single or pair of non-fusion coordinate primers
+        # single or pair of non-fusion (i.e. on same chrom) coordinate primers
         if not self.fusion_breakpoint:
             try:
                 # raise exception if both coordinates are on different chroms.
@@ -57,10 +57,11 @@ class Primer():
             print(self.UCSC_start_breakpoint_response)
             self.UCSC_end_breakpoint_response = self.UCSC_request(self.end_coordinate, breakpoint_position="3'")
             print(self.UCSC_end_breakpoint_response)
+
             # concatenate sequence at each breakpoint
             self.breakpoint_sequence = self._build_breakpoint()
-        # self.primers = self._design_primers(self.sequence_data['dna'])
-        # print(self.primers)
+            self.primers = self.design_primers(self.breakpoint_sequence)
+            print(self.primers)
         # print(pd.DataFrame.from_dict(self.primers))
 
         # elif len(self.coordinates) == 2:
@@ -108,7 +109,8 @@ class Primer():
             start_chrom, start = start_coordinate.split(":")
             # check both coords are on the same chromosome and fusion primers are not required
             if start_chrom != end_chrom:
-                raise ChromMismatch(f"Error! Coordinates must be on the same chromosome. {start_chrom} and {end_chrom} supplied.")
+                raise ChromMismatch(f"Error! {start_coordinate} and {end_coordinate} are on different chromosomes. "
+                                    f"Specify the same chromosome or use --fusion_breakpoint.")
 
             url = f"https://api.genome.ucsc.edu/getData/sequence?genome={self.ref_genome};chrom={start_chrom};start={start};end={end}"
 
@@ -145,25 +147,13 @@ class Primer():
         print(response.url)
         return response.json()
 
-    def UCSC_fusion_request(self, breakpoint_position):
-        """UCSC reqeust for fusion primers with logic for handling start and end points"""
-    def design_primers(self, **primer3_args):
+
+    def design_primers(self, template_sequence):
         """design PCR primers using primer3 with default options"""
         # TODO primer design options?
-        #construct primer3 args
-        primer3_seq_args = {}
-        primer3_global_args = {}
-
-        for kwarg, value in primer3_args.items():
-            if "SEQUENCE" in kwarg:
-                primer3_seq_args[kwarg] = value
-            elif "PRIMER" in kwarg:
-                primer3_global_args[kwarg] = value
-
-
         primers = primer3.design_primers(
-            seq_args=primer3_seq_args,
-            global_args=primer3_global_args)
+            seq_args={'SEQUENCE_ID': 'test', 'SEQUENCE_TEMPLATE': template_sequence},
+            global_args={})
         parsed_primers = self._parse_primer3(primers)
         return parsed_primers
 
@@ -203,10 +193,6 @@ class Primer():
 
         return primer_info
 
-    def _write_primer_details(self):
-        """Save primer3 output to file"""
-
-
 # exceptions
 class ChromMismatch(Exception):
     '''raise this if start and end chroms are different in non-breakpoint situation'''
@@ -240,13 +226,13 @@ def prymer_main():
                         action="store_true")
     args = parser.parse_args()
 
-    primer = Primer(start_coordinate=args.start_coordinate,
+    primers = Primer(start_coordinate=args.start_coordinate,
                     end_coordinate=args.end_coordinate,
                     ref_genome=args.reference_genome,
                     seq_len=args.template_sequence_length,
                     fusion_breakpoint=args.fusion_breakpoint)
 
-    return primer
+    return primers
 
 
 
