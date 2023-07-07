@@ -3,6 +3,7 @@
 # TODO error handling
 
 import argparse
+import re
 
 import requests
 import primer3
@@ -61,23 +62,13 @@ class Primer():
             print(self.primers)
         # print(pd.DataFrame.from_dict(self.primers))
 
-        # elif len(self.coordinates) == 2:
-        #     self.parsed_left_coordinate = self._parse_coordinate(self.coordinates[0], pair = 'left')
-        #     self.parsed_right_coordinate = self._parse_coordinate(self.coordinates[1], pair = 'right')
-        #     self.left_sequence_data = self._UCSC_request(self.parsed_left_coordinate)
-        #     self.right_sequence_data = self._UCSC_request(self.parsed_right_coordinate)
-        #
-        #     self.breakpoint_sequence_template = self._build_breakpoint()
-        #     self.breakpoint_primers = self._design_primers(self.breakpoint_sequence_template)
-        #     print(self.breakpoint_primers)
-        #     print(pd.DataFrame.from_dict(self.breakpoint_primers))
         # TODO handle two coordinates for fusions
         #     pass
 
     # _parse_coordinates no longer used - to delete
     def _parse_coordinate(self, coord, pair = None):
         """Parse provided genomic coordinate for use in UCSC API request. Start and end positions are caluclated
-        from themain.py given coordinates, which is assumed to be the center of the desired amplicon.
+        from the main.py given coordinates, which is assumed to be the center of the desired amplicon.
         Coordinate must be in the format chr1:234,567,890.
         Pass a negative integer for downstream end position"""
 
@@ -172,10 +163,10 @@ class Primer():
             pair_id = str('PAIR_' + key.split(sep="_")[2])
             if pair_id not in parsed:
                 parsed[pair_id] = {}
-                parsed[pair_id][key] = value
-            else:
-                parsed[pair_id][key] = value
-        # TODO separate this into new function. Need to think about dict key names to get more readable output df.
+            # replace any numbers in key string for ease of output formatting
+            key = re.sub('_\d', '', key)
+            parsed[pair_id][key] = value
+
         primer_info = {}
         for key, value in parsed.items():
             if key.split(sep="_")[1] in ['0','1','2','3','4','5']:
