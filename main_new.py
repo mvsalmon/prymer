@@ -54,10 +54,11 @@ class Primer():
             print(self.UCSC_start_breakpoint_response)
             self.UCSC_end_breakpoint_response = self.UCSC_request(self.end_coordinate, breakpoint_position="3'")
             print(self.UCSC_end_breakpoint_response)
+
             # concatenate sequence at each breakpoint
             self.breakpoint_sequence = self._build_breakpoint()
-        # self.primers = self._design_primers(self.sequence_data['dna'])
-        # print(self.primers)
+            self.primers = self.design_primers(self.breakpoint_sequence)
+            print(self.primers)
         # print(pd.DataFrame.from_dict(self.primers))
 
         # elif len(self.coordinates) == 2:
@@ -181,6 +182,7 @@ class Primer():
                 primer_info[key] = parsed[key]
 
         return primer_info
+
 # exceptions
 class ChromMismatch(Exception):
     '''raise this if start and end chroms are different in non-breakpoint situation'''
@@ -214,13 +216,13 @@ def prymer_main():
                         action="store_true")
     args = parser.parse_args()
 
-    primer = Primer(start_coordinate=args.start_coordinate,
+    primers = Primer(start_coordinate=args.start_coordinate,
                     end_coordinate=args.end_coordinate,
                     ref_genome=args.reference_genome,
                     seq_len=args.template_sequence_length,
                     fusion_breakpoint=args.fusion_breakpoint)
 
-    return primer
+    return primers
 
 
 
