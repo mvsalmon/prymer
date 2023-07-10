@@ -29,6 +29,10 @@ class Primer():
         self.seq_len = seq_len
         self.fusion_breakpoint = fusion_breakpoint
 
+        # variables to store primer3 output
+        self.primer3_info = {}
+        self.primer3_pairs = {}
+
         self._run()
 
 
@@ -59,7 +63,9 @@ class Primer():
             # concatenate sequence at each breakpoint
             self.breakpoint_sequence = self._build_breakpoint()
             self.primers = self.design_primers(self.breakpoint_sequence)
-            print(self.primers)
+
+            print(self.primer3_info)
+            print(self.primer3_pairs)
         # print(pd.DataFrame.from_dict(self.primers))
 
         # TODO handle two coordinates for fusions
@@ -158,7 +164,7 @@ class Primer():
     def _parse_primer3(self, primer3_output):
         """parse primer3 output dictionary to be more manageable."""
         parsed = {}
-
+        # store primer3 output as a dict. Keys are pair IDs, values are dict of results for that pair
         for key, value in primer3_output.items():
             pair_id = str('PAIR_' + key.split(sep="_")[2])
             if pair_id not in parsed:
@@ -167,12 +173,12 @@ class Primer():
             key = re.sub('_\d', '', key)
             parsed[pair_id][key] = value
 
-        primer_info = {}
-        for key, value in parsed.items():
-            if key.split(sep="_")[1] in ['0','1','2','3','4','5']:
-                primer_info[key] = parsed[key]
-
-        return primer_info
+        # separate primer3 info and per-pair results
+        for pair, result in parsed.items():
+            if pair in ['PAIR_EXPLAIN', 'PAIR_NUM']:
+                self.primer3_info[pair] = result
+            else:
+                self.primer3_pairs[pair] = result
 
 # exceptions
 class ChromMismatch(Exception):
