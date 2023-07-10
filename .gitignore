@@ -3,3 +3,4 @@ models
 notebooks
 tests.sh
 test.py
+/test_output/
