@@ -203,19 +203,5 @@ def prymer_main():
 
     # return primers
 
-
-
-
-
-# coord1 = "Chr5:12345678"
-# coord2 = "Chr5:12345678", "Chr7:12345678"
-
-#test_breakpoint_primers = prymer_main(args.coordinates)
-# print(test_primer.sequence_data)
-# print(test_primer.sequence_data['dna'])
-# print(test_primer.primers)
-# print(test_primer.primers['PAIR_0'])
-# print(test_primer.primers['PAIR_1']['PRIMER_LEFT_1_SEQUENCE'])
-
 if __name__ == '__main__':
     prymer_main()
