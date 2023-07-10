@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from main_new import Primer
+from Prymer import Primer
 
 class TestPrimer(TestCase):
 
