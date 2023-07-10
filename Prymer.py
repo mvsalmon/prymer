@@ -44,24 +44,21 @@ class Primer():
                 exit(1)
             # store template sequence from API request
             self.template_sequence = self.UCSC_response["dna"]
-            print(self.UCSC_response["dna"])
+            # print(self.UCSC_response["dna"])
             # design primers
             self.primers = self.design_primers(self.template_sequence)
-            print(self.primers)
+
 
         # fusion breakpoint primers. Must be a pair. Call UCSC API request for each breakpoint.
         if self.fusion_breakpoint and self.end_coordinate:
             self.UCSC_start_breakpoint_response = self.UCSC_request(self.start_coordinate, breakpoint_position="5'")
-            print(self.UCSC_start_breakpoint_response)
+            # print(self.UCSC_start_breakpoint_response)
             self.UCSC_end_breakpoint_response = self.UCSC_request(self.end_coordinate, breakpoint_position="3'")
-            print(self.UCSC_end_breakpoint_response)
+            # print(self.UCSC_end_breakpoint_response)
 
             # concatenate sequence at each breakpoint
             self.breakpoint_sequence = self._build_breakpoint()
             self.primers = self.design_primers(self.breakpoint_sequence)
-
-            print(self.primer3_info)
-            print(self.primer3_pairs)
 
             #write output
             outpath = f'{self.output_path}{self.output_name}.csv'
@@ -112,7 +109,7 @@ class Primer():
             print(error)
             exit(1)
 
-        print(response.url)
+        # print(response.url)
         return response.json()
 
     def design_primers(self, template_sequence):
@@ -199,6 +196,7 @@ def prymer_main():
     if args.output_name is None:
         args.output_name = args.start_coordinate.split(sep=":")[0]
 
+    print("Designing primers...")
     Primer(args)
 
     # return primers
