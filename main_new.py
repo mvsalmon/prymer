@@ -17,17 +17,14 @@ class Primer():
     For two coordinates (i.e. fusion), each coordinate should represent the breakpoint, and will be either the
     start or end position of the returned sequence."""
 
-    def __init__(self, start_coordinate=None,
-                 end_coordinate=None,
-                 ref_genome='hg38',
-                 seq_len=500,
-                 fusion_breakpoint=False):
-
-        self.start_coordinate = start_coordinate
-        self.end_coordinate = end_coordinate
-        self.ref_genome = ref_genome
-        self.seq_len = seq_len
-        self.fusion_breakpoint = fusion_breakpoint
+    def __init__(self, args):
+        self.start_coordinate = args.start_coordinate
+        self.end_coordinate = args.end_coordinate
+        self.ref_genome = args.reference_genome
+        self.seq_len = args.template_sequence_length
+        self.fusion_breakpoint = args.fusion_breakpoint
+        self.output_path = args.output_path
+        self.output_name = args.output_name
 
         # variables to store primer3 output
         self.primer3_info = {}
@@ -66,6 +63,10 @@ class Primer():
 
             print(self.primer3_info)
             print(self.primer3_pairs)
+
+            #write output
+            outpath = f'{self.output_path}{self.output_name}.csv'
+            pd.DataFrame.from_dict(self.primer3_pairs).to_csv(outpath)
         # print(pd.DataFrame.from_dict(self.primers))
 
         # TODO handle two coordinates for fusions
@@ -187,6 +188,7 @@ class ChromMismatch(Exception):
 
 def prymer_main():
     parser = argparse.ArgumentParser(description='Design PCR primers for given genomic coordinates')
+    # TODO add output file name/path options
     parser.add_argument('-c',
                         '--start_coordinate',
                         help="Genomic coordinate for primer design in the format chr1:23456. "
@@ -211,15 +213,22 @@ def prymer_main():
                         '--fusion_breakpoint',
                         help="Specifies if primers must span a fusion breakpoint.",
                         action="store_true")
+    parser.add_argument('-o',
+                        '--output_path',
+                        help="Output filepath",
+                        default="./")
+    parser.add_argument('-n',
+                        '--output_name',
+                        help="Output file name. Default is chrn, where n is value passed to start coordinate",
+                        default=None)
+
     args = parser.parse_args()
+    if args.output_name is None:
+        args.output_name = args.start_coordinate.split(sep=":")[0]
 
-    primers = Primer(start_coordinate=args.start_coordinate,
-                    end_coordinate=args.end_coordinate,
-                    ref_genome=args.reference_genome,
-                    seq_len=args.template_sequence_length,
-                    fusion_breakpoint=args.fusion_breakpoint)
+    Primer(args)
 
-    return primers
+    # return primers
 
 
 
