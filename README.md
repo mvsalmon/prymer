@@ -44,5 +44,5 @@ found by primer3. All primers should be checked before use.
 
 # Requirements
 requests~=2.31.0
-primer3-py~=1.0.0
+primer3-py=1.0.0
 pandas~=1.5.3
