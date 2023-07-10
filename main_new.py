@@ -1,4 +1,3 @@
-# TODO command line argument handling
 # TODO handle multiple coordinates for fusions
 # TODO error handling
 
@@ -68,32 +67,6 @@ class Primer():
             outpath = f'{self.output_path}{self.output_name}.csv'
             pd.DataFrame.from_dict(self.primer3_pairs).to_csv(outpath)
         # print(pd.DataFrame.from_dict(self.primers))
-
-        # TODO handle two coordinates for fusions
-        #     pass
-
-    # _parse_coordinates no longer used - to delete
-    def _parse_coordinate(self, coord, pair = None):
-        """Parse provided genomic coordinate for use in UCSC API request. Start and end positions are caluclated
-        from the main.py given coordinates, which is assumed to be the center of the desired amplicon.
-        Coordinate must be in the format chr1:234,567,890.
-        Pass a negative integer for downstream end position"""
-
-        coordinate = coord.lower().split(sep=":")
-        # if a single coordinate has been given, start postion is self.template_sequence_length/2.
-        if not pair:
-            coordinate[1] = int(coordinate[1]) - round(self.template_sequence_length/2)
-            coordinate.append(coordinate[1] + self.template_sequence_length)
-        elif pair == 'left':
-            coordinate[1] = int(coordinate[1]) + self.template_sequence_length * -1
-            coordinate.append(coordinate[1] + self.template_sequence_length)
-        elif pair == 'right':
-            coordinate.append(int(coordinate[1]) + self.template_sequence_length)
-
-        coordinate.append(self.ref_genome)
-        coordinate = dict(zip(['chrom', 'start', 'end', 'genome'], coordinate))
-        print(coordinate)
-        return coordinate
 
     def UCSC_request(self, start_coordinate, end_coordinate=None, breakpoint_position=None):
         """Handles different sets of coordinates (eg, single, pair, fusion), then
@@ -219,7 +192,7 @@ def prymer_main():
                         default="./")
     parser.add_argument('-n',
                         '--output_name',
-                        help="Output file name. Default is chrn, where n is value passed to start coordinate",
+                        help="Output file name. Default is chrN, where N is value passed to start coordinate",
                         default=None)
 
     args = parser.parse_args()
