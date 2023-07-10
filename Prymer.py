@@ -188,7 +188,7 @@ def prymer_main():
                         action="store_true")
     parser.add_argument('-o',
                         '--output_path',
-                        help="Output filepath",
+                        help="Output filepath. Defaults to current directory",
                         default="./")
     parser.add_argument('-n',
                         '--output_name',
