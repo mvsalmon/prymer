@@ -1,5 +1,4 @@
-# TODO handle multiple coordinates for fusions
-# TODO error handling
+# TODO update primer output parsing for compatability with primer3-py v2.0.0
 
 import argparse
 import re
@@ -29,6 +28,10 @@ class Primer():
         self.primer3_info = {}
         self.primer3_pairs = {}
 
+        # primer3 options
+        self.seq_args = {'SEQUENCE_ID': self.output_name, 'SEQUENCE_TEMPLATE': None}
+        self.global_args = {}
+
         self._run()
 
 
@@ -43,22 +46,28 @@ class Primer():
                 print(error)
                 exit(1)
             # store template sequence from API request
-            self.template_sequence = self.UCSC_response["dna"]
+            #self.template_sequence = self.UCSC_response["dna"]
+            self.seq_args['SEQUENCE_TEMPLATE'] = self.template_sequence
             # print(self.UCSC_response["dna"])
             # design primers
-            self.primers = self.design_primers(self.template_sequence)
+            self.primers = self.design_primers()
 
 
         # fusion breakpoint primers. Must be a pair. Call UCSC API request for each breakpoint.
         if self.fusion_breakpoint and self.end_coordinate:
             self.UCSC_start_breakpoint_response = self.UCSC_request(self.start_coordinate, breakpoint_position="5'")
-            # print(self.UCSC_start_breakpoint_response)
+            #print(self.UCSC_start_breakpoint_response)
             self.UCSC_end_breakpoint_response = self.UCSC_request(self.end_coordinate, breakpoint_position="3'")
-            # print(self.UCSC_end_breakpoint_response)
+            #print(self.UCSC_end_breakpoint_response)
 
             # concatenate sequence at each breakpoint
             self.breakpoint_sequence = self._build_breakpoint()
-            self.primers = self.design_primers(self.breakpoint_sequence)
+
+            # update primer3 options
+            self.seq_args['SEQUENCE_TEMPLATE'] = self.breakpoint_sequence
+            # include breakpoint region, 100bp either side
+            self.seq_args['SEQUENCE_TARGET'] = [self.seq_len - 100, 200]
+            self.primers = self.design_primers()
 
             #write output
             outpath = f'{self.output_path}{self.output_name}.csv'
@@ -112,12 +121,13 @@ class Primer():
         # print(response.url)
         return response.json()
 
-    def design_primers(self, template_sequence):
+    def design_primers(self):
         """design PCR primers using primer3 with default options"""
         # TODO primer design options?
+        # TODO set include breakpoint region for fusion primer
         primers = primer3.design_primers(
-            seq_args={'SEQUENCE_ID': 'test', 'SEQUENCE_TEMPLATE': template_sequence},
-            global_args={})
+            seq_args=self.seq_args,
+            global_args=self.global_args)
         parsed_primers = self._parse_primer3(primers)
         return parsed_primers
 
@@ -126,12 +136,12 @@ class Primer():
         breakpoint_sequence = ''.join([self.UCSC_start_breakpoint_response['dna'],
                                        self.UCSC_end_breakpoint_response['dna']])
         return breakpoint_sequence
+
     def _design_breakpoint_primers(self):
         """placeholder for possible future fusion stuff"""
         #primers = self._design_primers(self.breakpoint_sequence_template)
         #return primers
         pass
-
     def _parse_primer3(self, primer3_output):
         """parse primer3 output dictionary to be more manageable."""
         parsed = {}
@@ -159,7 +169,7 @@ class ChromMismatch(Exception):
 def prymer_main():
     parser = argparse.ArgumentParser(description='Design PCR primers for given genomic coordinates')
     # TODO add output file name/path options
-    parser.add_argument('-c',
+    parser.add_argument('-s',
                         '--start_coordinate',
                         help="Genomic coordinate for primer design in the format chr1:23456. "
                              "If --fusion_breakpoint is used, this should be the 5' breakpoint",
@@ -172,7 +182,8 @@ def prymer_main():
                         default=None)
     parser.add_argument('-l',
                         '--template_sequence_length',
-                        help='Length of template sequence in bp to use for primer design. Default 500bp',
+                        help='Length of template sequence in bp to use for primer design. For breakpoint primers, this'
+                             'specifies the length of sequence returned either side of the breakpoint. Default 500bp',
                         type=int,
                         default=500)
     parser.add_argument('-r',

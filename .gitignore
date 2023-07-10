@@ -1,6 +1,6 @@
 designDoc
 models
 notebooks
-tests.sh
-test.py
+test_main_new.py
 /test_output/
+./test*
