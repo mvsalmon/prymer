@@ -38,20 +38,22 @@ class Primer():
     def _run(self):
         """Main program control"""
         # single or pair of non-fusion (i.e. on same chrom) coordinate primers
+        # TODO set include region for two primers
         if not self.fusion_breakpoint:
+            # raise exception if both coordinates are on different chroms.
             try:
-                # raise exception if both coordinates are on different chroms.
                 self.UCSC_response = self.UCSC_request(self.start_coordinate, self.end_coordinate)
             except ChromMismatch as error:
                 print(error)
                 exit(1)
             # store template sequence from API request
-            #self.template_sequence = self.UCSC_response["dna"]
+            self.template_sequence = self.UCSC_response["dna"]
             self.seq_args['SEQUENCE_TEMPLATE'] = self.template_sequence
             # print(self.UCSC_response["dna"])
             # design primers
             self.primers = self.design_primers()
 
+            self.write_output()
 
         # fusion breakpoint primers. Must be a pair. Call UCSC API request for each breakpoint.
         if self.fusion_breakpoint and self.end_coordinate:
@@ -70,8 +72,9 @@ class Primer():
             self.primers = self.design_primers()
 
             #write output
-            outpath = f'{self.output_path}{self.output_name}.csv'
-            pd.DataFrame.from_dict(self.primer3_pairs).to_csv(outpath)
+            self.write_output()
+            # outpath = f'{self.output_path}{self.output_name}.csv'
+            # pd.DataFrame.from_dict(self.primer3_pairs).to_csv(outpath)
         # print(pd.DataFrame.from_dict(self.primers))
 
     def UCSC_request(self, start_coordinate, end_coordinate=None, breakpoint_position=None):
@@ -87,7 +90,7 @@ class Primer():
                                     f"Specify the same chromosome or use --fusion_breakpoint.")
 
             url = f"https://api.genome.ucsc.edu/getData/sequence?genome={self.ref_genome};chrom={start_chrom};start={start};end={end}"
-
+        # single coordinate
         elif not breakpoint_position:
             # request for single coordinate
             chrom, start = start_coordinate.split(":")
@@ -97,9 +100,8 @@ class Primer():
             end = int(start) + flanking_len
             start = int(start) - flanking_len
             url = f"https://api.genome.ucsc.edu/getData/sequence?genome={self.ref_genome};chrom={chrom};start={start};end={end}"
-
+        # fusion breakpoints
         else:
-            # request for breakpoint primers
             # adjust start or end position for 5'/3' break as required
             if breakpoint_position == "5'":
                 chrom, end = start_coordinate.split(":")
@@ -124,7 +126,6 @@ class Primer():
     def design_primers(self):
         """design PCR primers using primer3 with default options"""
         # TODO primer design options?
-        # TODO set include breakpoint region for fusion primer
         primers = primer3.design_primers(
             seq_args=self.seq_args,
             global_args=self.global_args)
@@ -161,6 +162,11 @@ class Primer():
             else:
                 self.primer3_pairs[pair] = result
 
+    def write_output(self):
+        """save results to disk"""
+        outpath = f'{self.output_path}{self.output_name}.csv'
+        pd.DataFrame.from_dict(self.primer3_pairs).to_csv(outpath)
+
 # exceptions
 class ChromMismatch(Exception):
     '''raise this if start and end chroms are different in non-breakpoint situation'''
@@ -194,6 +200,7 @@ def prymer_main():
                         '--fusion_breakpoint',
                         help="Specifies if primers must span a fusion breakpoint.",
                         action="store_true")
+    # TODO change to path object/verify path is valid
     parser.add_argument('-o',
                         '--output_path',
                         help="Output filepath. Defaults to current directory",
