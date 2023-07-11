@@ -1,4 +1,5 @@
 # TODO allow coordinate input with commas eg 1,234,567
+# TODO option to specify amplicon size
 # TODO update primer output parsing for compatability with primer3-py v2.0.0
 # TODO take file with coordinates as input?
 import argparse
@@ -79,9 +80,7 @@ class Primer():
 
             #write output
             self.write_output()
-            # outpath = f'{self.output_path}{self.output_name}.csv'
-            # pd.DataFrame.from_dict(self.primer3_pairs).to_csv(outpath)
-        # print(pd.DataFrame.from_dict(self.primers))
+
 
     def UCSC_request(self, start_coordinate, end_coordinate=None, breakpoint_position=None):
         """Handles different sets of coordinates (eg, single, pair, fusion), then
@@ -94,7 +93,6 @@ class Primer():
             if start_chrom != end_chrom:
                 raise ChromMismatch(f"Error! {start_coordinate} and {end_coordinate} are on different chromosomes. "
                                     f"Specify the same chromosome or use --fusion_breakpoint.")
-
             url = f"https://api.genome.ucsc.edu/getData/sequence?genome={self.ref_genome};chrom={start_chrom};start={start};end={end}"
         # single coordinate
         elif not breakpoint_position:
