@@ -154,8 +154,9 @@ class Primer:
         )
         return breakpoint_sequence
 
-    def _reverse_comp(self, sequence):
-        return primer3.p3helpers.reverse_complement(sequence)
+    # p3helpers only included in v1.2.0+
+    # def _reverse_comp(self, sequence):
+    #    return primer3.p3helpers.reverse_complement(sequence)
 
     def design_primers(self):
         """design PCR primers using primer3 with default options"""
