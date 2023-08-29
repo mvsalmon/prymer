@@ -7,7 +7,7 @@ import re
 
 import requests
 import pandas as pd
-from primer3 import bindings
+import primer3
 
 
 class Primer:
@@ -90,6 +90,7 @@ class Primer:
     ):
         """Handles different sets of coordinates (eg, single, pair, fusion), then
         parses and requests sequence data from UCSC. Returns json."""
+        print("INFO: Querying UCSC database...")
         # two coordinates on same chromosome
         if end_coordinate:
             end_chrom, end = end_coordinate.split(":")
@@ -154,12 +155,13 @@ class Primer:
         return breakpoint_sequence
 
     def _reverse_comp(self, sequence):
-        return p3helpers.reverse_complement(sequence)
+        return primer3.p3helpers.reverse_complement(sequence)
 
     def design_primers(self):
         """design PCR primers using primer3 with default options"""
         # TODO primer design options?
-        primers = bindings.design_primers(
+        print("INFO: Designing primers...")
+        primers = primer3.design_primers(
             seq_args=self.seq_args, global_args=self.global_args
         )
         parsed_primers = self._parse_primer3(primers)
@@ -173,6 +175,7 @@ class Primer:
 
     def _parse_primer3(self, primer3_output):
         """parse primer3 output dictionary to be more manageable."""
+        print("INFO: Parsing results...")
         parsed = {}
         # store primer3 output as a dict. Keys are pair IDs, values are dict of results for that pair
         for key, value in primer3_output.items():
@@ -192,6 +195,7 @@ class Primer:
 
     def write_output(self):
         """save results to disk"""
+        print("INFO: Writing output...")
         outpath = f"{self.output_path}/{self.output_name}.csv"
         pd.DataFrame.from_dict(self.primer3_pairs).to_csv(outpath)
 
@@ -278,7 +282,7 @@ def prymer_main():
     if args.output_name is None:
         args.output_name = args.start_coordinate.split(sep=":")[0]
 
-    print("Designing primers...")
+    # print("Designing primers...")
     Primer(args)
 
     # return primers
