@@ -1,7 +1,7 @@
 # TODO allow coordinate input with commas eg 1,234,567
 # TODO option to specify amplicon size
-# TODO update primer output parsing for compatability with primer3-py v2.0.0
 # TODO take file with coordinates as input?
+# TODO add PRIMER_EXPLAIN info to output file
 import argparse
 import re
 
@@ -180,12 +180,17 @@ class Primer:
         parsed = {}
         # store primer3 output as a dict. Keys are pair IDs, values are dict of results for that pair
         for key, value in primer3_output.items():
-            pair_id = str("PAIR_" + key.split(sep="_")[2])
-            if pair_id not in parsed:
-                parsed[pair_id] = {}
-            # replace any numbers in key string for ease of output formatting
-            key = re.sub("_\d", "", key)
-            parsed[pair_id][key] = value
+            try:
+                # This is compatible with primer3-py v2.0.0 output by skipping over list version in output dict
+                # should also be backwards compatible with older versions.
+                pair_id = str("PAIR_" + key.split(sep="_")[2])
+                if pair_id not in parsed:
+                    parsed[pair_id] = {}
+                # replace any numbers in key string for ease of output formatting
+                key = re.sub("_\d", "", key)
+                parsed[pair_id][key] = value
+            except IndexError:
+                pass
 
         # separate primer3 info and per-pair results
         for pair, result in parsed.items():
