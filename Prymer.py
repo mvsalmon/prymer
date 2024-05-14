@@ -33,6 +33,7 @@ class Primer:
         # variables to store primer3 output
         self.primer3_info = {}
         self.primer3_pairs = {}
+        self.pair_explain = ""
 
         # primer3 options
         self.seq_args = {"SEQUENCE_ID": self.output_name, "SEQUENCE_TEMPLATE": None}
@@ -166,6 +167,7 @@ class Primer:
             seq_args=self.seq_args, global_args=self.global_args
         )
         parsed_primers = self._parse_primer3(primers)
+        self.pair_explain = primers['PRIMER_PAIR_EXPLAIN']
         return parsed_primers
 
     def _design_breakpoint_primers(self):
@@ -204,6 +206,8 @@ class Primer:
         print("INFO: Writing output...")
         outpath = f"{self.output_path}/{self.output_name}.csv"
         pd.DataFrame.from_dict(self.primer3_pairs).to_csv(outpath)
+        # Show primer design details - useful if no pairs returned
+        print(f"Design details: {self.pair_explain}")
 
 
 # exceptions
