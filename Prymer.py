@@ -41,6 +41,10 @@ class Primer:
 
         self._run()
 
+    def _parse_p3_opts(self):
+        opts_dict = {}
+        
+
     def _run(self):
         """Main program control"""
         # single or pair of non-fusion (i.e. on same chrom) coordinate primers
@@ -286,6 +290,11 @@ def prymer_main():
         help="Specify if either the reverse complement of either the start or end sequence is required."
         'Options are "start" or "end"',
         choices=["start", "end"],
+    )
+    parser.add_argument(
+        "--primer3_gloabl_opts",
+        nargs="*",
+        help="Specify additional primer3 global options in the form OPTION_NAME: <value>"
     )
 
     args = parser.parse_args()
