@@ -37,13 +37,20 @@ class Primer:
 
         # primer3 options
         self.seq_args = {"SEQUENCE_ID": self.output_name, "SEQUENCE_TEMPLATE": None}
-        self.global_args = {}
+        if not args.primer3_global_opts:
+            self.global_args = {}
+        else:
+            self.global_args = self._parse_primer3_global_opts(args.primer3_global_opts)
 
         self._run()
 
-    def _parse_p3_opts(self):
-        opts_dict = {}
-        
+    def _parse_primer3_global_opts(self, p3_global_opts):
+        global_opts_dict = {}
+        for option in p3_global_opts:
+            param, value = option.split(":")
+            global_opts_dict[param.strip()] = value.strip()
+
+        return global_opts_dict
 
     def _run(self):
         """Main program control"""
@@ -185,10 +192,11 @@ class Primer:
         print("INFO: Parsing results...")
         parsed = {}
         # store primer3 output as a dict. Keys are pair IDs, values are dict of results for that pair
+        # compatible with primer3-py v2.0.0 output by skipping PRIMER_{PAIR, LEFT, RIGHT, INTERNAL} list in output dict
+        # should also be backwards compatible with older versions
         for key, value in primer3_output.items():
+            # catch index error from PRIMER_{PAIR, LEFT, RIGHT, INTERNAL} list to skip over
             try:
-                # This is compatible with primer3-py v2.0.0 output by skipping over list version in output dict
-                # should also be backwards compatible with older versions.
                 pair_id = str("PAIR_" + key.split(sep="_")[2])
                 if pair_id not in parsed:
                     parsed[pair_id] = {}
@@ -292,9 +300,9 @@ def prymer_main():
         choices=["start", "end"],
     )
     parser.add_argument(
-        "--primer3_gloabl_opts",
+        "--primer3_global_opts",
         nargs="*",
-        help="Specify additional primer3 global options in the form OPTION_NAME: <value>"
+        help="Specify additional primer3 global options in the form OPTION_NAME:<value>"
     )
 
     args = parser.parse_args()
