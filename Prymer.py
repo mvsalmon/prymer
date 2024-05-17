@@ -26,8 +26,8 @@ class Primer:
         self.fusion_breakpoint = args.fusion_breakpoint
         self.output_path = args.output_path
         self.output_name = args.output_name
-        self.start_primer_position = args.start_primer_position
-        self.end_primer_position = args.end_primer_position
+        self.start_primer_position = str(args.start_primer_position)
+        self.end_primer_position = str(args.end_primer_position)
         self.rev_comp = args.reverse_complement
 
         # variables to store primer3 output
@@ -41,6 +41,9 @@ class Primer:
             self.global_args = {}
         else:
             self.global_args = self._parse_primer3_global_opts(args.primer3_global_opts)
+
+        #TODO Validate output path
+        #TODO check for existing file?
 
         self._run()
 
@@ -127,10 +130,10 @@ class Primer:
         # fusion breakpoints
         else:
             # adjust start or end position for 5'/3' break as required
-            if breakpoint_position == "5'":
+            if breakpoint_position == "5":
                 chrom, end = start_coordinate.split(":")
                 start = int(end) - self.seq_len
-            elif breakpoint_position == "3'":
+            elif breakpoint_position == "3":
                 chrom, start = start_coordinate.split(":")
                 end = int(start) + self.seq_len
 
@@ -285,13 +288,13 @@ def prymer_main():
         "--start_primer_position",
         help="""Specify the relative ("5'" or "3'") position of the primer for the 
                         --start_coordinate. Should be used when a each side of a breakpoint are both on the 
-                        - or + strand. Default 5'.""",
-        default="5'",
+                        - or + strand. Choose one of 5 or 3. Default 5. Note: do not include the trailing "'".""",
+        default="5",
     )
     parser.add_argument(
         "--end_primer_position",
-        help="As --start_primer_position, for --end_coordinate. Default 3'.",
-        default="3'",
+        help="As --start_primer_position, for --end_coordinate. Default 3.",
+        default="3",
     )
     parser.add_argument(
         "--reverse_complement",
