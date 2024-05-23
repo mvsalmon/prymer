@@ -1,14 +1,14 @@
 # TODO allow coordinate input with commas eg 1,234,567
-# TODO option to specify amplicon size
 # TODO take file with coordinates as input?
 # TODO add PRIMER_EXPLAIN info to output file
+
 import argparse
 import re
 
 import requests
 import pandas as pd
 import primer3
-
+from primer3 import p3helpers
 
 class Primer:
     """Class to manage primer objects.
@@ -170,8 +170,8 @@ class Primer:
         return breakpoint_sequence
 
     # p3helpers only included in v1.2.0+
-    # def _reverse_comp(self, sequence):
-    #    return primer3.p3helpers.reverse_complement(sequence)
+    def _reverse_comp(self, sequence):
+       return primer3.p3helpers.reverse_complement(sequence)
 
     def design_primers(self):
         """design PCR primers using primer3 with default options"""
@@ -204,7 +204,7 @@ class Primer:
                 if pair_id not in parsed:
                     parsed[pair_id] = {}
                 # replace any numbers in key string for ease of output formatting
-                key = re.sub("_\d", "", key)
+                key = re.sub(r"_\d", "", key)
                 parsed[pair_id][key] = value
             except IndexError:
                 pass
@@ -305,7 +305,9 @@ def prymer_main():
     parser.add_argument(
         "--primer3_global_opts",
         nargs="*",
-        help="Specify additional primer3 global options in the form OPTION_NAME:<value>"
+        help="""Specify additional primer3 global options in the form OPTION_NAME:<value>. The version of primer3 used 
+                is 2.6.1. See https://htmlpreview.github.io/?https://github.com/primer3-org/primer3/blob/v2.6.1/src/primer3_manual.htm
+                for details of all options available."""
     )
 
     args = parser.parse_args()
