@@ -19,8 +19,9 @@ class Primer:
     start or end position of the returned sequence."""
 
     def __init__(self, args):
-        self.start_coordinate = args.start_coordinate
-        self.end_coordinate = args.end_coordinate
+        # strip any commas from primer coordinates
+        self.start_coordinate = args.start_coordinate.replace(',', '')
+        self.end_coordinate = args.end_coordinate.replace(',', '')
         self.ref_genome = args.reference_genome
         self.seq_len = args.template_sequence_length
         self.fusion_breakpoint = args.fusion_breakpoint
