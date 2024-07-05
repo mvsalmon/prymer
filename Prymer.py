@@ -10,14 +10,14 @@ import pandas as pd
 import primer3
 from primer3 import p3helpers
 
+
 class Primer:
     """Class to manage primer objects.
     seq_len = length of sequence in bp that will be returned from UCSC query. Value will be used to calculate the start
     and end positions of the sequence requested from UCSC.
     When a single coordinate is supplied, this will be at the center of the returned sequence.
-    For two coordinates (i.e. fusion), each coordinate should represent the breakpoint, and will be either the
-    start or end position of the returned sequence."""
-
+    For two coordinates (i.e. fusion), each coordinate should represent a breakpoint, and will be either the
+    start or end position of the returned sequence, depending on orientation."""
     def __init__(self, args):
         # strip any commas from primer coordinates
         self.start_coordinate = args.start_coordinate.replace(',', '')
@@ -43,8 +43,8 @@ class Primer:
         else:
             self.global_args = self._parse_primer3_global_opts(args.primer3_global_opts)
 
-        #TODO Validate output path
-        #TODO check for existing file?
+# TODO Validate output path
+# TODO check for existing file?
 
         self._run()
 
@@ -69,6 +69,7 @@ class Primer:
             except ChromMismatch as error:
                 print(error)
                 exit(1)
+
             # store template sequence from API request
             self.template_sequence = self.UCSC_response["dna"]
             self.seq_args["SEQUENCE_TEMPLATE"] = self.template_sequence
@@ -113,9 +114,9 @@ class Primer:
             start_chrom, start = start_coordinate.split(":")
             # check both coords are on the same chromosome and fusion primers are not required
             if start_chrom != end_chrom:
-                raise ChromMismatch(
-                    f"Error! {start_coordinate} and {end_coordinate} are on different chromosomes. "
-                    f"Specify the same chromosome or use --fusion_breakpoint."
+                raise ValueError(
+                    f"{start_coordinate} and {end_coordinate} are on different chromosomes. "
+                    f"Use --fusion_breakpoint or check coordinates."
                 )
             url = f"https://api.genome.ucsc.edu/getData/sequence?genome={self.ref_genome};chrom={start_chrom};start={start};end={end}"
         # single coordinate
@@ -152,7 +153,7 @@ class Primer:
         return response.json()
 
     def _build_breakpoint(self):
-        """concantenate breakpoint sequences"""
+        """concatenate breakpoint sequences"""
         # reverse complement sequences as required
         if self.rev_comp == "start":
             self.UCSC_start_breakpoint_response["dna"] = self._reverse_comp(
@@ -226,13 +227,6 @@ class Primer:
         print(f"Design details: {self.pair_explain}")
 
 
-# exceptions
-class ChromMismatch(Exception):
-    """raise this if start and end chroms are different in non-breakpoint situation"""
-
-    pass
-
-
 def prymer_main():
     parser = argparse.ArgumentParser(
         description="Design PCR primers for given genomic coordinates"
@@ -287,9 +281,9 @@ def prymer_main():
     )
     parser.add_argument(
         "--start_primer_position",
-        help="""Specify the relative ("5'" or "3'") position of the primer for the 
+        help="""Specify the 5' or 3' position of the primer relative to the breakpoint for the 
                         --start_coordinate. Should be used when a each side of a breakpoint are both on the 
-                        - or + strand. Choose one of 5 or 3. Default 5. Note: do not include the trailing "'".""",
+                        - or + strand. Choose one of 5 or 3. Default 5. Note: do not include the trailing '.""",
         default="5",
     )
     parser.add_argument(
