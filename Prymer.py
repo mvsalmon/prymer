@@ -61,19 +61,11 @@ class Primer:
         # single or pair of non-fusion (i.e. on same chrom) coordinate primers
         # TODO set include region for two non-fusion primers
         if not self.fusion_breakpoint:
-            # raise exception if both coordinates are on different chroms.
-            try:
-                self.UCSC_response = self.UCSC_request(
-                    self.start_coordinate, self.end_coordinate
-                )
-            except ChromMismatch as error:
-                print(error)
-                exit(1)
-
+            self.UCSC_response = self.UCSC_request(self.start_coordinate, self.end_coordinate)
             # store template sequence from API request
             self.template_sequence = self.UCSC_response["dna"]
             self.seq_args["SEQUENCE_TEMPLATE"] = self.template_sequence
-            # print(self.UCSC_response["dna"])
+
             # design primers
             self.primers = self.design_primers()
 
@@ -108,7 +100,7 @@ class Primer:
         """Handles different sets of coordinates (eg, single, pair, fusion), then
         parses and requests sequence data from UCSC. Returns json."""
         print("INFO: Querying UCSC database...")
-        # two coordinates on same chromosome
+        # two coordinates on same chromosome (non-fusion)
         if end_coordinate:
             end_chrom, end = end_coordinate.split(":")
             start_chrom, start = start_coordinate.split(":")
@@ -118,6 +110,8 @@ class Primer:
                     f"{start_coordinate} and {end_coordinate} are on different chromosomes. "
                     f"Use --fusion_breakpoint or check coordinates."
                 )
+                exit(1)
+
             url = f"https://api.genome.ucsc.edu/getData/sequence?genome={self.ref_genome};chrom={start_chrom};start={start};end={end}"
         # single coordinate
         elif not breakpoint_position:
