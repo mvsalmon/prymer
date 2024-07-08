@@ -50,21 +50,38 @@ class Primer:
 
         self._run()
 
+    def _parse_tag_list(self, tag_list, n):
+        """Split tag list into sub-lists for primer3-py parsing"""
+        for i in range(0, len(tag_list), n):
+            yield tag_list[i:i + n]
+
     def _parse_primer3_opts(self, p3_opts):
-        """Return a dictionary containing primer3 options"""
+        """Parse inputs for primer3 global and sequence tags and return a dictionary containing primer3 options with
+        appropriate formatting: Ranges should be converted to a list, lists of ranges to lists of lists.
+
+        Args:
+            p3_opts: list of p3 tag:value pairs.
+
+        Returns:
+            Dictionary of primer3 input options.
+        """
+
         p3_options = {}
         for option in p3_opts:
-            param, value = option.split(":")
-            # if value is a comma delimited string, convert to list of ints for proper primer3py parsing
-            # needs to be list of lists??
-            if len(value) > 1:
-                value = [int(x) for x in value.split(",")]
-                p3_options[param.strip()] = value
+            tag, value = option.split("=")
+            # parse values with multiple options, separated with ";" or " "
+            values = [x.strip() for x in re.split(r";\s|;|\s", value)]
+            # generate sub-lists for multiple values
+            if len(values) > 1:
+                #values = list(self._parse_tag_list(values, 1))
+                p3_options[tag.strip()] = values
+            # if value is an interval, return as list
+            elif re.search(r",", value):
+                p3_options[tag.strip()] = values
             else:
-                p3_options[param.strip()] = value.strip()
+                p3_options[tag.strip()] = values[0]
 
         return p3_options
-
     def _run(self):
         """Main program control"""
         # single or pair of non-fusion (i.e. on same chrom) coordinate primers
@@ -303,16 +320,16 @@ def prymer_main():
     parser.add_argument(
         "--p3_global_tags",
         nargs="*",
-        help="""Specify additional primer3 global tags in the form OPTION_NAME:<value>. The version of primer3 used 
-                is 2.6.1. See https://htmlpreview.github.io/?https://github.com/primer3-org/primer3/blob/v2.6.1/src/primer3_manual.htm
+        help="""Specify additional primer3 global tags as a space separated list in the form 'OPTION1_NAME=<value(s)>' 'OPTION2_NAME=<value(s)>'. 
+                The version of primer3 used is 2.6.1. See https://htmlpreview.github.io/?https://github.com/primer3-org/primer3/blob/v2.6.1/src/primer3_manual.htm
                 for details of all options available."""
     )
     parser.add_argument(
         "--p3_sequence_tags",
         nargs="*",
-        help="""Specify additional primer3 sequence tags in the form of OPTION_NAME:<value>. The version of primer3 used 
-                is 2.6.1. See https://htmlpreview.github.io/?https://github.com/primer3-org/primer3/blob/v2.6.1/src/primer3_manual.htm
-                for details of all options available."""
+        help="""Specify additional primer3 sequence tags as a space separated list in the form 'OPTION1_NAME=<value(s)>' 'OPTION2_NAME=<value(s)>'.
+         The version of primer3 used is 2.6.1. See https://htmlpreview.github.io/?https://github.com/primer3-org/primer3/blob/v2.6.1/src/primer3_manual.htm
+        for details of all options available."""
     )
 
     args = parser.parse_args()
