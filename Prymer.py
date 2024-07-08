@@ -36,25 +36,34 @@ class Primer:
         self.primer3_pairs = {}
         self.pair_explain = ""
 
-        # primer3 options
-        self.seq_args = {"SEQUENCE_ID": self.output_name, "SEQUENCE_TEMPLATE": None}
-        if not args.primer3_global_opts:
-            self.global_args = {}
+        # set primer3 options
+        self.p3_seq_tags = {"SEQUENCE_ID": self.output_name, "SEQUENCE_TEMPLATE": None}
+        if args.p3_sequence_tags:
+            self.p3_seq_tags.update(self._parse_primer3_opts(args.p3_sequence_tags))
+        if not args.p3_global_tags:
+            self.p3_global_tags = {}
         else:
-            self.global_args = self._parse_primer3_global_opts(args.primer3_global_opts)
+            self.p3_global_tags = self._parse_primer3_opts(args.p3_global_tags)
 
 # TODO Validate output path
 # TODO check for existing file?
 
         self._run()
 
-    def _parse_primer3_global_opts(self, p3_global_opts):
-        global_opts_dict = {}
-        for option in p3_global_opts:
+    def _parse_primer3_opts(self, p3_opts):
+        """Return a dictionary containing primer3 options"""
+        p3_options = {}
+        for option in p3_opts:
             param, value = option.split(":")
-            global_opts_dict[param.strip()] = value.strip()
+            # if value is a comma delimited string, convert to list of ints for proper primer3py parsing
+            # needs to be list of lists??
+            if len(value) > 1:
+                value = [int(x) for x in value.split(",")]
+                p3_options[param.strip()] = value
+            else:
+                p3_options[param.strip()] = value.strip()
 
-        return global_opts_dict
+        return p3_options
 
     def _run(self):
         """Main program control"""
@@ -64,7 +73,7 @@ class Primer:
             self.UCSC_response = self.UCSC_request(self.start_coordinate, self.end_coordinate)
             # store template sequence from API request
             self.template_sequence = self.UCSC_response["dna"]
-            self.seq_args["SEQUENCE_TEMPLATE"] = self.template_sequence
+            self.p3_seq_tags["SEQUENCE_TEMPLATE"] = self.template_sequence
 
             # design primers
             self.primers = self.design_primers()
@@ -86,9 +95,9 @@ class Primer:
             self.breakpoint_sequence = self._build_breakpoint()
 
             # update primer3 options
-            self.seq_args["SEQUENCE_TEMPLATE"] = self.breakpoint_sequence
+            self.p3_seq_tags["SEQUENCE_TEMPLATE"] = self.breakpoint_sequence
             # include breakpoint region, 100bp either side
-            self.seq_args["SEQUENCE_TARGET"] = [self.seq_len - 100, 200]
+            self.p3_seq_tags["SEQUENCE_TARGET"] = [self.seq_len - 100, 200]
             self.primers = self.design_primers()
 
             # write output
@@ -174,7 +183,7 @@ class Primer:
         # TODO primer design options?
         print("INFO: Designing primers...")
         primers = primer3.design_primers(
-            seq_args=self.seq_args, global_args=self.global_args
+            seq_args=self.p3_seq_tags, global_args=self.p3_global_tags
         )
         parsed_primers = self._parse_primer3(primers)
         self.pair_explain = primers['PRIMER_PAIR_EXPLAIN']
@@ -292,9 +301,16 @@ def prymer_main():
         choices=["start", "end"],
     )
     parser.add_argument(
-        "--primer3_global_opts",
+        "--p3_global_tags",
         nargs="*",
-        help="""Specify additional primer3 global options in the form OPTION_NAME:<value>. The version of primer3 used 
+        help="""Specify additional primer3 global tags in the form OPTION_NAME:<value>. The version of primer3 used 
+                is 2.6.1. See https://htmlpreview.github.io/?https://github.com/primer3-org/primer3/blob/v2.6.1/src/primer3_manual.htm
+                for details of all options available."""
+    )
+    parser.add_argument(
+        "--p3_sequence_tags",
+        nargs="*",
+        help="""Specify additional primer3 sequence tags in the form of OPTION_NAME:<value>. The version of primer3 used 
                 is 2.6.1. See https://htmlpreview.github.io/?https://github.com/primer3-org/primer3/blob/v2.6.1/src/primer3_manual.htm
                 for details of all options available."""
     )
