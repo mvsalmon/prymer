@@ -254,8 +254,9 @@ def prymer_main():
     parser.add_argument(
         "-s",
         "--start_coordinate",
-        help="Genomic coordinate for primer design in the format chr1:23456. "
-        "If --fusion_breakpoint is used, this should be the 5' breakpoint",
+        help="""Genomic coordinate for primer design in the format chr1:23456. 
+                Commas are allowed, but the full coordinate should be contained by quote marks in this case e.g.
+                "chr1:23,456". If --fusion_breakpoint is used, this should be the 5' breakpoint""",
         required=True,
     )
     parser.add_argument(
@@ -320,14 +321,14 @@ def prymer_main():
     parser.add_argument(
         "--p3_global_tags",
         nargs="*",
-        help="""Specify additional primer3 global tags as a space separated list in the form 'OPTION1_NAME=<value(s)>' 'OPTION2_NAME=<value(s)>'. 
+        help="""Specify additional primer3 global tags as a space separated list in the form "OPTION1_NAME=<value(s)>" "OPTION2_NAME=<value(s)>". 
                 The version of primer3 used is 2.6.1. See https://htmlpreview.github.io/?https://github.com/primer3-org/primer3/blob/v2.6.1/src/primer3_manual.htm
                 for details of all options available."""
     )
     parser.add_argument(
         "--p3_sequence_tags",
         nargs="*",
-        help="""Specify additional primer3 sequence tags as a space separated list in the form 'OPTION1_NAME=<value(s)>' 'OPTION2_NAME=<value(s)>'.
+        help="""Specify additional primer3 sequence tags as a space separated list in the form "OPTION1_NAME=<value(s)>" "OPTION2_NAME=<value(s)>".
          The version of primer3 used is 2.6.1. See https://htmlpreview.github.io/?https://github.com/primer3-org/primer3/blob/v2.6.1/src/primer3_manual.htm
         for details of all options available."""
     )
