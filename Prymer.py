@@ -113,8 +113,8 @@ class Primer:
 
             # update primer3 options
             self.p3_seq_tags["SEQUENCE_TEMPLATE"] = self.breakpoint_sequence
-            # include breakpoint region, 100bp either side
-            self.p3_seq_tags["SEQUENCE_TARGET"] = [self.seq_len - 100, 200]
+            # include breakpoint region, 50bp either side
+            self.p3_seq_tags["SEQUENCE_TARGET"] = [self.seq_len - 50, 100]
             self.primers = self.design_primers()
 
             # write output
