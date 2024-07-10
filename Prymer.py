@@ -1,6 +1,9 @@
-# TODO allow coordinate input with commas eg 1,234,567
+# TODO control number of outputted primers
 # TODO take file with coordinates as input?
 # TODO add PRIMER_EXPLAIN info to output file
+
+# TODO Validate output path
+# TODO check for existing file?
 
 import argparse
 import re
@@ -45,8 +48,6 @@ class Primer:
         else:
             self.p3_global_tags = self._parse_primer3_opts(args.p3_global_tags)
 
-# TODO Validate output path
-# TODO check for existing file?
 
         self._run()
 
@@ -175,20 +176,29 @@ class Primer:
     def _build_breakpoint(self):
         """concatenate breakpoint sequences"""
         # reverse complement sequences as required
-        if self.rev_comp == "start":
-            self.UCSC_start_breakpoint_response["dna"] = self._reverse_comp(
-                self.UCSC_start_breakpoint_response["dna"]
+        if self.rev_comp:
+            if self.rev_comp == "both":
+                self.UCSC_start_breakpoint_response["dna"] = self._reverse_comp(
+                    self.UCSC_start_breakpoint_response["dna"]
             )
-        if self.rev_comp == "end":
-            self.UCSC_end_breakpoint_response["dna"] = self._reverse_comp(
-                self.UCSC_end_breakpoint_response["dna"]
+                self.UCSC_end_breakpoint_response["dna"] = self._reverse_comp(
+                    self.UCSC_end_breakpoint_response["dna"]
             )
+            elif self.rev_comp == "start":
+                self.UCSC_start_breakpoint_response["dna"] = self._reverse_comp(
+                    self.UCSC_start_breakpoint_response["dna"]
+                )
+            elif self.rev_comp == "end":
+                self.UCSC_end_breakpoint_response["dna"] = self._reverse_comp(
+                    self.UCSC_end_breakpoint_response["dna"]
+                )
         breakpoint_sequence = "".join(
             [
                 self.UCSC_start_breakpoint_response["dna"],
                 self.UCSC_end_breakpoint_response["dna"],
             ]
         )
+
         return breakpoint_sequence
 
     # p3helpers only included in v1.2.0+
@@ -315,8 +325,8 @@ def prymer_main():
     parser.add_argument(
         "--reverse_complement",
         help="Specify if either the reverse complement of either the start or end sequence is required."
-        'Options are "start" or "end"',
-        choices=["start", "end"],
+        'Options are "start", "end", or "both.',
+        choices=["start", "end", "both"],
     )
     parser.add_argument(
         "--p3_global_tags",
