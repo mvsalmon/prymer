@@ -1,5 +1,24 @@
-# prymer
-A python script to automate PCR primer design. Under development
+# Prymer
+Command line python programme to aid primer design around genomic structural variant (SV) breakpoints.
+
+# Details
+The primary use of Prymer is to takes a pair of genomic coordinates that represent the breakpoints of an SV and 
+retrieve the genomic sequence immediately up of downstream of the breakpoints from the UCSC genome database. The
+retrieved sequences are then joined and primers are designed (using the primer3-py wrapper for primer3) to flank the
+SV junction, returning the top 5 primers from primer 3.
+
+The amount of sequence returned from UCSC can be controlled with the `-l` flag, and primer 3 options can be specified
+using `--p3_sequnce_tags` and/or `--p3_global_tags`.
+
+A single coordinate can also be provided, allowing primers to be designed around a single genomic locus. 
+
+
+
+
+
+
+Current functionality is basic, and the output file is a csv file containing the details of the top 5 primer pairs
+found by primer3. All primers should be checked before use.
 
 # Usage
 prymer.py -c _[options]_
@@ -28,21 +47,3 @@ prymer.py -c _[options]_
                         Output file name. Default is chrN, where N is value passed to start coordinate
 
 
-# Details
-The script will use the provided coordinates to retrieve the surrounding genomic sequence from the UCSC database and 
-design primers using primer3 (default settings).
-
-If a single coordinate is provided, this will be the center of the retrieved sequence, allowing primers to be designed 
-around a single genomic locus. 
-
-Pairs of coordinates should be given in 5' - 3' order relative to the genome, e.g. to design primers surrounding the 
-breakpoints of a genomic rearrangement, the 5' breakpointof the rearrangement should be specified first, followed by 
-the 3' breakpoint.
-
-Current functionality is basic, and the output file is a csv file containing the details of the top 5 primer pairs
-found by primer3. All primers should be checked before use.
-
-# Requirements
-requests~=2.31.0
-primer3-py=1.0.0
-pandas~=1.5.3
