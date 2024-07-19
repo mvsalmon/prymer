@@ -21,10 +21,11 @@ class Primer:
     When a single coordinate is supplied, this will be at the center of the returned sequence.
     For two coordinates (i.e. fusion), each coordinate should represent a breakpoint, and will be either the
     start or end position of the returned sequence, depending on orientation."""
+
     def __init__(self, args):
         # strip any commas from primer coordinates
-        self.start_coordinate = args.start_coordinate.replace(',', '')
-        self.end_coordinate = args.end_coordinate.replace(',', '')
+        self.start_coordinate = args.start_coordinate.replace(",", "")
+        self.end_coordinate = args.end_coordinate.replace(",", "")
         self.ref_genome = args.reference_genome
         self.seq_len = args.template_sequence_length
         self.fusion_breakpoint = args.fusion_breakpoint
@@ -48,47 +49,16 @@ class Primer:
         else:
             self.p3_global_tags = self._parse_primer3_opts(args.p3_global_tags)
 
-
         self._run()
 
-    def _parse_tag_list(self, tag_list, n):
-        """Split tag list into sub-lists for primer3-py parsing"""
-        for i in range(0, len(tag_list), n):
-            yield tag_list[i:i + n]
-
-    def _parse_primer3_opts(self, p3_opts):
-        """Parse inputs for primer3 global and sequence tags and return a dictionary containing primer3 options with
-        appropriate formatting: Ranges should be converted to a list, lists of ranges to lists of lists.
-
-        Args:
-            p3_opts: list of p3 tag:value pairs.
-
-        Returns:
-            Dictionary of primer3 input options.
-        """
-
-        p3_options = {}
-        for option in p3_opts:
-            tag, value = option.split("=")
-            # parse values with multiple options, separated with ";" or " "
-            values = [x.strip() for x in re.split(r";\s|;|\s", value)]
-            # generate sub-lists for multiple values
-            if len(values) > 1:
-                #values = list(self._parse_tag_list(values, 1))
-                p3_options[tag.strip()] = values
-            # if value is an interval, return as list
-            elif re.search(r",", value):
-                p3_options[tag.strip()] = values
-            else:
-                p3_options[tag.strip()] = values[0]
-
-        return p3_options
     def _run(self):
         """Main program control"""
         # single or pair of non-fusion (i.e. on same chrom) coordinate primers
         # TODO set include region for two non-fusion primers
         if not self.fusion_breakpoint:
-            self.UCSC_response = self.UCSC_request(self.start_coordinate, self.end_coordinate)
+            self.UCSC_response = self.UCSC_request(
+                self.start_coordinate, self.end_coordinate
+            )
             # store template sequence from API request
             self.template_sequence = self.UCSC_response["dna"]
             self.p3_seq_tags["SEQUENCE_TEMPLATE"] = self.template_sequence
@@ -120,6 +90,39 @@ class Primer:
 
             # write output
             self.write_output()
+
+    def _parse_tag_list(self, tag_list, n):
+        """Split tag list into sub-lists for primer3-py parsing"""
+        for i in range(0, len(tag_list), n):
+            yield tag_list[i : i + n]
+
+    def _parse_primer3_opts(self, p3_opts):
+        """Parse inputs for primer3 global and sequence tags and return a dictionary containing primer3 options with
+        appropriate formatting: Ranges should be converted to a list, lists of ranges to lists of lists.
+
+        Args:
+            p3_opts: list of p3 tag:value pairs.
+
+        Returns:
+            Dictionary of primer3 input options.
+        """
+
+        p3_options = {}
+        for option in p3_opts:
+            tag, value = option.split("=")
+            # parse values with multiple options, separated with ";" or " "
+            values = [x.strip() for x in re.split(r";\s|;|\s", value)]
+            # generate sub-lists for multiple values
+            if len(values) > 1:
+                # values = list(self._parse_tag_list(values, 1))
+                p3_options[tag.strip()] = values
+            # if value is an interval, return as list
+            elif re.search(r",", value):
+                p3_options[tag.strip()] = values
+            else:
+                p3_options[tag.strip()] = values[0]
+
+        return p3_options
 
     def UCSC_request(
         self, start_coordinate, end_coordinate=None, breakpoint_position=None
@@ -180,10 +183,10 @@ class Primer:
             if self.rev_comp == "both":
                 self.UCSC_start_breakpoint_response["dna"] = self._reverse_comp(
                     self.UCSC_start_breakpoint_response["dna"]
-            )
+                )
                 self.UCSC_end_breakpoint_response["dna"] = self._reverse_comp(
                     self.UCSC_end_breakpoint_response["dna"]
-            )
+                )
             elif self.rev_comp == "start":
                 self.UCSC_start_breakpoint_response["dna"] = self._reverse_comp(
                     self.UCSC_start_breakpoint_response["dna"]
@@ -203,7 +206,7 @@ class Primer:
 
     # p3helpers only included in v1.2.0+
     def _reverse_comp(self, sequence):
-       return primer3.p3helpers.reverse_complement(sequence)
+        return primer3.p3helpers.reverse_complement(sequence)
 
     def design_primers(self):
         """design PCR primers using primer3 with default options"""
@@ -213,7 +216,7 @@ class Primer:
             seq_args=self.p3_seq_tags, global_args=self.p3_global_tags
         )
         parsed_primers = self._parse_primer3(primers)
-        self.pair_explain = primers['PRIMER_PAIR_EXPLAIN']
+        self.pair_explain = primers["PRIMER_PAIR_EXPLAIN"]
         return parsed_primers
 
     def _design_breakpoint_primers(self):
@@ -333,14 +336,14 @@ def prymer_main():
         nargs="*",
         help="""Specify additional primer3 global tags as a space separated list in the form "OPTION1_NAME=<value(s)>" "OPTION2_NAME=<value(s)>". 
                 The version of primer3 used is 2.6.1. See https://htmlpreview.github.io/?https://github.com/primer3-org/primer3/blob/v2.6.1/src/primer3_manual.htm
-                for details of all options available."""
+                for details of all options available.""",
     )
     parser.add_argument(
         "--p3_sequence_tags",
         nargs="*",
         help="""Specify additional primer3 sequence tags as a space separated list in the form "OPTION1_NAME=<value(s)>" "OPTION2_NAME=<value(s)>".
          The version of primer3 used is 2.6.1. See https://htmlpreview.github.io/?https://github.com/primer3-org/primer3/blob/v2.6.1/src/primer3_manual.htm
-        for details of all options available."""
+        for details of all options available.""",
     )
 
     args = parser.parse_args()
