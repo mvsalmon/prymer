@@ -255,7 +255,12 @@ class Primer:
         """save results to disk"""
         print("INFO: Writing output...")
         outpath = f"{self.output_path}/{self.output_name}.csv"
-        pd.DataFrame.from_dict(self.primer3_pairs).to_csv(outpath)
+        try:
+            pd.DataFrame.from_dict(self.primer3_pairs).to_csv(outpath)
+        except PermissionError as error:
+            print(f"{error}. Is a file with the same name already open?")
+            exit(1)
+            
         # Show primer design details - useful if no pairs returned
         print(f"Design details: {self.pair_explain}")
 
