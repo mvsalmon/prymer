@@ -258,7 +258,7 @@ class Primer:
         try:
             pd.DataFrame.from_dict(self.primer3_pairs).to_csv(outpath)
         except PermissionError as error:
-            print(f"{error}. Is a file with the same name already open?")
+            print(f"{error}. A file with the same name may be open.")
             exit(1)
             
         # Show primer design details - useful if no pairs returned
