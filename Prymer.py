@@ -1,12 +1,11 @@
-# TODO control number of outputted primers
 # TODO take file with coordinates as input?
-# TODO add PRIMER_EXPLAIN info to output file
+# TODO add PRIMER_EXPLAIN info to output file?
 
 # TODO Validate output path
-# TODO check for existing file?
 
 import argparse
 import re
+import os
 
 import requests
 import pandas as pd
@@ -15,12 +14,8 @@ from primer3 import p3helpers
 
 
 class Primer:
-    """Class to manage primer objects.
-    seq_len = length of sequence in bp that will be returned from UCSC query. Value will be used to calculate the start
-    and end positions of the sequence requested from UCSC.
-    When a single coordinate is supplied, this will be at the center of the returned sequence.
-    For two coordinates (i.e. fusion), each coordinate should represent a breakpoint, and will be either the
-    start or end position of the returned sequence, depending on orientation."""
+    """Class to design and manage primers. Primers designed according to input arguments and returns a .csv file with
+    the top 5 hits. Probably doesn't need to be a Class but it works."""
 
     def __init__(self, args):
         # strip any commas from primer coordinates
@@ -355,7 +350,7 @@ def prymer_main():
     if args.output_name is None:
         args.output_name = args.start_coordinate.split(sep=":")[0]
 
-    # print("Designing primers...")
+
     Primer(args)
 
     # return primers
