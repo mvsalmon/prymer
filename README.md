@@ -14,8 +14,8 @@ by the [Primer3 v2.6.1. manual.](https://htmlpreview.github.io/?https://github.c
 
 A single coordinate can also be provided, allowing primers to be designed around a single genomic locus. 
 
+See requirements.txt for a list of dependencies.
 
-The amount of sequence returned from UCSC can be controlled with the `-l` flag, 
 
 # Example Usage
 prymer.py --start_coordinate "chr1:23,456" --end_coordinate "chr6:54,321" --fusion_breakpoint --output_path *path/to/output*
