@@ -350,11 +350,7 @@ def prymer_main():
     if args.output_name is None:
         args.output_name = args.start_coordinate.split(sep=":")[0]
 
-
     Primer(args)
-
-    # return primers
-
 
 if __name__ == "__main__":
     prymer_main()
