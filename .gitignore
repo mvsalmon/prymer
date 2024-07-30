@@ -3,7 +3,9 @@ models
 notebooks
 test_main_new.py
 /test_output/
-test.py
-/*.csv
-/venv/
-/.venv/
+tests.py
+venv/
+.venv/
+.idea/
+.vscode/
+__pycache__/
