@@ -255,7 +255,7 @@ class Primer:
         except PermissionError as error:
             print(f"{error}. A file with the same name may be open.")
             exit(1)
-            
+
         # Show primer design details - useful if no pairs returned
         print(f"Design details: {self.pair_explain}")
 
@@ -316,8 +316,7 @@ def prymer_main():
     parser.add_argument(
         "--start_primer_position",
         help="""Specify the 5' or 3' position of the primer relative to the breakpoint for the 
-                        --start_coordinate. Should be used when a each side of a breakpoint are both on the 
-                        - or + strand. Choose one of 5 or 3. Default 5. Note: do not include the trailing '.""",
+                        --start_coordinate. Choose one of 5 or 3. Default 5. Note: do not include the trailing '.""",
         default="5",
     )
     parser.add_argument(
@@ -351,6 +350,7 @@ def prymer_main():
         args.output_name = args.start_coordinate.split(sep=":")[0]
 
     Primer(args)
+
 
 if __name__ == "__main__":
     prymer_main()
