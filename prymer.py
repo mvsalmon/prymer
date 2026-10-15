@@ -5,14 +5,21 @@
 
 import argparse
 import logging
+from pathlib import Path
 import re
 import sys
+from typing import Optional, Dict, Tuple, Any
 import os
 
 import requests
 import pandas as pd
 import primer3
 from primer3 import p3helpers
+
+# Constants
+BREAKPOINT_FLANKING_BP = 50
+DEFAULT_TEMPLATE_SEQUENCE_LENGTH = 500
+DEFAULT_REFERENCE_GENOME = "hg38"
 
 logger = logging.getLogger(__name__)
 class Primer:
@@ -89,16 +96,17 @@ class Primer:
             # write output
             self.write_output()
 
+    #TODO Check if needed
     def _parse_tag_list(self, tag_list, n):
         """Split tag list into sub-lists for primer3-py parsing"""
         for i in range(0, len(tag_list), n):
             yield tag_list[i : i + n]
 
-    def _parse_primer3_opts(self, p3_opts):
+    def _parse_primer3_opts(self, p3_opts: list) -> Dict:
         """Parse inputs for primer3 global and sequence tags and return a dictionary containing primer3 options with
         appropriate formatting: Ranges should be converted to a list, lists of ranges to lists of lists.
 
-        Args:
+        Parameters:
             p3_opts: list of p3 tag:value pairs.
 
         Returns:
@@ -123,10 +131,26 @@ class Primer:
         return p3_options
 
     def UCSC_request(
-        self, start_coordinate, end_coordinate=None, breakpoint_position=None
-    ):
-        """Handles different sets of coordinates (eg, single, pair, fusion), then
-        parses and requests sequence data from UCSC. Returns json."""
+        self,
+        start_coordinate:str,
+        end_coordinate: Optional[str] = None,
+        breakpoint_position: Optional[str] =None
+    ) -> Dict[str, Any]:
+        """Get sequence data from UCSC API.
+
+        Parameters:
+            start_coordinate: Format "chr:position" (e.g. "chr1:12345")
+            end_coordinate: Optional second coordinate
+            breakpoint_position: "5" or "3" for position of fusion breakpoint primers
+
+        Returns:
+            JSON response from UCSC API containing DNA sequence
+
+        Raises:
+            ValueError: If non-fusion coordinates are on different chromosomes.
+            requests.Exceptions.HTTPError: If API request fails
+            requests.exceptions.RequestException: If connection to API fails
+        """
         logger.info("Querying UCSC database...")
         # two coordinates on same chromosome (non-fusion)
         if end_coordinate:
@@ -176,8 +200,14 @@ class Primer:
         # print(response.url)
         return response.json()
 
-    def _build_breakpoint(self):
-        """concatenate breakpoint sequences"""
+    def _build_breakpoint(self) -> str:
+        """Concatenate breakpoint sequences.
+
+        Parameters:
+
+        Returns:
+            String containing the DNA sequence around the SV breakpoint.
+        """
         # reverse complement sequences as required
         if self.rev_comp:
             if self.rev_comp == "both":
@@ -205,11 +235,28 @@ class Primer:
         return breakpoint_sequence
 
     # p3helpers only included in v1.2.0+
-    def _reverse_comp(self, sequence):
+    def _reverse_comp(self, sequence: str) -> str:
+        """Wrapper around primer3.p3helpers.reverse_complement().
+
+        Parameters:
+            sequence: String containing the DNA sequence to be reverse complemented
+
+        Returns:
+            String containing the reverse complemented DNA sequence
+        """
+
         return primer3.p3helpers.reverse_complement(sequence)
 
-    def design_primers(self):
-        """design PCR primers using primer3 with default options"""
+    def design_primers(self) -> Dict:
+        """Design PCR primers using primer3 with default options
+
+        Parameters:
+            TBD
+
+        Returns:
+            Dictionary containing Primer3 output
+        """
+
         # TODO primer design options?
         logger.info("Designing primers...")
         primers = primer3.design_primers(
@@ -224,9 +271,17 @@ class Primer:
         # primers = self._design_primers(self.breakpoint_sequence_template)
         # return primers
         pass
+    #TODO set proper return value when refactored
+    #TODO rewrite to be less confusing
+    def _parse_primer3(self, primer3_output: Dict):
+        """Parse primer3 output dictionary to be more manageable.
 
-    def _parse_primer3(self, primer3_output):
-        """parse primer3 output dictionary to be more manageable."""
+        Parameters:
+            primer3_output: Dictionary containing raw Primer3 output
+
+        Returns:
+            Parsed Primer3 output dictionary
+            """
         logger.info("Parsing results...")
         parsed = {}
         # store primer3 output as a dict. Keys are pair IDs, values are dict of results for that pair
@@ -252,7 +307,14 @@ class Primer:
                 self.primer3_pairs[pair] = result
 
     def write_output(self):
-        """save results to disk"""
+        """Save Primer3 results to csv file.
+
+        Parameters:
+            TBD
+
+        Returns:
+            Nothing.
+        """
         logger.info("Writing output...")
         outpath = f"{self.output_path}/{self.output_name}.csv"
         try:
