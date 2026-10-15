@@ -4,7 +4,9 @@
 # TODO Validate output path
 
 import argparse
+import logging
 import re
+import sys
 import os
 
 import requests
@@ -12,15 +14,16 @@ import pandas as pd
 import primer3
 from primer3 import p3helpers
 
-
+logger = logging.getLogger(__name__)
 class Primer:
     """Class to design and manage primers. Primers designed according to input arguments and returns a .csv file with
-    the top 5 hits. Probably doesn't need to be a Class but it works."""
+    the top 5 hits. Probably doesn't need to be a Class, but it works."""
 
     def __init__(self, args):
         # strip any commas from primer coordinates
         self.start_coordinate = args.start_coordinate.replace(",", "")
-        self.end_coordinate = args.end_coordinate.replace(",", "")
+        if args.end_coordinate is not None:
+            self.end_coordinate = args.end_coordinate.replace(",", "")
         self.ref_genome = args.reference_genome
         self.seq_len = args.template_sequence_length
         self.fusion_breakpoint = args.fusion_breakpoint
@@ -124,7 +127,7 @@ class Primer:
     ):
         """Handles different sets of coordinates (eg, single, pair, fusion), then
         parses and requests sequence data from UCSC. Returns json."""
-        print("INFO: Querying UCSC database...")
+        logger.info("Querying UCSC database...")
         # two coordinates on same chromosome (non-fusion)
         if end_coordinate:
             end_chrom, end = end_coordinate.split(":")
@@ -161,12 +164,14 @@ class Primer:
             url = f"https://api.genome.ucsc.edu/getData/sequence?genome={self.ref_genome};chrom={chrom};start={start};end={end}"
 
         # make API request and check ok
-        response = requests.get(url)
         try:
+            response = requests.get(url, timeout=10)
             response.raise_for_status()
         except requests.exceptions.HTTPError as error:
-            print(error)
-            exit(1)
+            logger.error("HTTP error occurred: %s", error)
+        except requests.exceptions.RequestException as error:
+            logger.error("Failed to connect to %s: %s", url, error)
+            raise SystemExit(1)
 
         # print(response.url)
         return response.json()
@@ -206,7 +211,7 @@ class Primer:
     def design_primers(self):
         """design PCR primers using primer3 with default options"""
         # TODO primer design options?
-        print("INFO: Designing primers...")
+        logger.info("Designing primers...")
         primers = primer3.design_primers(
             seq_args=self.p3_seq_tags, global_args=self.p3_global_tags
         )
@@ -222,7 +227,7 @@ class Primer:
 
     def _parse_primer3(self, primer3_output):
         """parse primer3 output dictionary to be more manageable."""
-        print("INFO: Parsing results...")
+        logger.info("Parsing results...")
         parsed = {}
         # store primer3 output as a dict. Keys are pair IDs, values are dict of results for that pair
         # compatible with primer3-py v2.0.0 output by skipping PRIMER_{PAIR, LEFT, RIGHT, INTERNAL} list in output dict
@@ -248,19 +253,25 @@ class Primer:
 
     def write_output(self):
         """save results to disk"""
-        print("INFO: Writing output...")
+        logger.info("Writing output...")
         outpath = f"{self.output_path}/{self.output_name}.csv"
         try:
             pd.DataFrame.from_dict(self.primer3_pairs).to_csv(outpath)
         except PermissionError as error:
-            print(f"{error}. A file with the same name may be open.")
-            exit(1)
+            logger.error("Permission error: %s\nA file with the same name may be open", error)
+            raise SystemExit(1)
 
         # Show primer design details - useful if no pairs returned
-        print(f"Design details: {self.pair_explain}")
+        logger.info("Design details: %s",self.pair_explain)
 
 
 def prymer_main():
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(levelname)s: %(message)s"
+    )
+    logger = logging.getLogger(__name__)
+
     parser = argparse.ArgumentParser(
         description="Design PCR primers for given genomic coordinates"
     )
@@ -277,8 +288,7 @@ def prymer_main():
         "--end_coordinate",
         help="Optional second genomic coordinate for primer design. Default None."
         "If --fusion_breakpoint is used, this is required and should be the "
-        "3' breakpoint.",
-        default=None,
+        "3' breakpoint."
     )
     parser.add_argument(
         "-l",
