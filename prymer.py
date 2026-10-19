@@ -8,7 +8,7 @@ import logging
 from pathlib import Path
 import re
 import sys
-from typing import Optional, Dict, Tuple, Any
+from typing import Optional, Dict, AnyStr, Tuple, Any
 import os
 
 import requests
@@ -22,13 +22,56 @@ DEFAULT_TEMPLATE_SEQUENCE_LENGTH = 500
 DEFAULT_REFERENCE_GENOME = "hg38"
 
 logger = logging.getLogger(__name__)
+
+def parse_coordinates(coordinate: str) -> Tuple[str, int]:
+    """Parse and validate coordinates (e.g. 'chr1:123456').
+
+    Parameters:
+        coordinate: String containing coordinate to be validated.
+
+    Returns:
+        Tuple containing the chromosome (str) and position (int), e.g. ['chr1', 123456].
+
+    Raises:
+        ValueError: If coordinate is invalid.
+    """
+    clean_coordinate = coordinate.replace(",", "")
+
+    if not re.fullmatch(r'chr([1-9]|1[0-9]|2[0-2]|[XY]):\d+', clean_coordinate):
+        raise ValueError(f"Invalid coordinates '{coordinate}'. Must be in the format 'chr1:123456' or 'chr1:123,456'.")
+
+    chrom, pos = clean_coordinate.split(":")
+    return chrom, int(pos)
+
+def validate_output_path(path_str: str) -> Path:
+    """Validate the output directory exists and is writable.
+
+    Parameters:
+        path_str: String containing user-specified output directtory path
+
+    Returns:
+          Output directory path.
+
+    Raises:
+        FileNotFoundError: If output directory does not exist.
+        PermissionError: If output directory is not writable.
+        """
+    path = Path(path_str)
+    if not path.exists():
+        raise FileNotFoundError(f"Output path does not exist: {path}")
+    if not os.access(path, os.W_OK):
+        raise PermissionError(f"Output path is not writable: {path}")
+    return path
+
 class Primer:
     """Class to design and manage primers. Primers designed according to input arguments and returns a .csv file with
     the top 5 hits. Probably doesn't need to be a Class, but it works."""
 
-    def __init__(self, args):
+    def __init__(self, args: argparse.Namespace) -> None:
         # strip any commas from primer coordinates
         self.start_coordinate = args.start_coordinate.replace(",", "")
+        chrom, pos = parse_coordinates(args.start_coordinate)
+        self.start_chromosome = f"{chrom}:{pos}"
         if args.end_coordinate is not None:
             self.end_coordinate = args.end_coordinate.replace(",", "")
         self.ref_genome = args.reference_genome
@@ -41,8 +84,8 @@ class Primer:
         self.rev_comp = args.reverse_complement
 
         # variables to store primer3 output
-        self.primer3_info = {}
-        self.primer3_pairs = {}
+        self.primer3_info: Dict[str, Dict[str, str]] = {}
+        self.primer3_pairs: Dict[str, Dict[str, str]] = {}
         self.pair_explain = ""
 
         # set primer3 options
@@ -89,8 +132,9 @@ class Primer:
 
             # update primer3 options
             self.p3_seq_tags["SEQUENCE_TEMPLATE"] = self.breakpoint_sequence
-            # include breakpoint region, 50bp either side
-            self.p3_seq_tags["SEQUENCE_TARGET"] = [self.seq_len - 50, 100]
+            # include breakpoint region, default 50bp either side
+            self.p3_seq_tags["SEQUENCE_TARGET"] = [DEFAULT_TEMPLATE_SEQUENCE_LENGTH - BREAKPOINT_FLANKING_BP,
+                                                   2 * BREAKPOINT_FLANKING_BP]
             self.primers = self.design_primers()
 
             # write output
@@ -283,7 +327,7 @@ class Primer:
             Parsed Primer3 output dictionary
             """
         logger.info("Parsing results...")
-        parsed = {}
+        parsed: Dict[str, Dict[str, Any]]= {}
         # store primer3 output as a dict. Keys are pair IDs, values are dict of results for that pair
         # compatible with primer3-py v2.0.0 output by skipping PRIMER_{PAIR, LEFT, RIGHT, INTERNAL} list in output dict
         # should also be backwards compatible with older versions
