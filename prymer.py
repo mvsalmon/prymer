@@ -1,7 +1,6 @@
 # TODO take file with coordinates as input?
 # TODO add PRIMER_EXPLAIN info to output file?
 
-# TODO Validate output path
 
 import argparse
 import logging
@@ -38,7 +37,7 @@ def parse_coordinates(coordinate: str) -> Tuple[str, int]:
     clean_coordinate = coordinate.replace(",", "")
 
     if not re.fullmatch(r'chr([1-9]|1[0-9]|2[0-2]|[XY]):\d+', clean_coordinate):
-        raise ValueError(f"Invalid coordinates '{coordinate}'. Must be in the format 'chr1:123456' or 'chr1:123,456'.")
+        raise ValueError(f"Invalid coordinates '{coordinate}'. Must be in the format 'chr1:123456'.")
 
     chrom, pos = clean_coordinate.split(":")
     return chrom, int(pos)
@@ -47,7 +46,7 @@ def validate_output_path(path_str: str) -> Path:
     """Validate the output directory exists and is writable.
 
     Parameters:
-        path_str: String containing user-specified output directtory path
+        path_str: String containing user-specified output directory path
 
     Returns:
           Output directory path.
@@ -77,7 +76,7 @@ class Primer:
         self.ref_genome = args.reference_genome
         self.seq_len = args.template_sequence_length
         self.fusion_breakpoint = args.fusion_breakpoint
-        self.output_path = args.output_path
+        self.output_path = str(validate_output_path(args.output_path))
         self.output_name = args.output_name
         self.start_primer_position = str(args.start_primer_position)
         self.end_primer_position = str(args.end_primer_position)
