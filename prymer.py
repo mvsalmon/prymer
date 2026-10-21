@@ -118,8 +118,16 @@ def design_primers(primer3_options) -> Dict:
     self.pair_explain = primers["PRIMER_PAIR_EXPLAIN"]
     return parsed_primers
 
+def build_UCSC_url(genome: str, chrom: str, start: int, end: int) -> str:
+    """Construct URL for UCSC API request."""
+    return(f"https://api.genome.ucsc.edu/getData/sequence?"
+           f"genome={genome};chrom={chrom};start={start};end={end}")
 
-
+def fetch_sequence(url: str, timeout: int = 10) -> str:
+    """Fetch sequence from UCSC API"""
+    response = requests.get(url, timeout=timeout)
+    response.raise_for_status()
+    return response.json()
 
 class Primer:
     """Class to design and manage primers. Primers designed according to input arguments and returns a .csv file with
