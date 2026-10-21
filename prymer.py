@@ -86,7 +86,7 @@ def parse_primer3_opts(p3_opts: list) -> Dict[str, Any]:
         # parse values with multiple options, separated with ";" or " "
         values = [x.strip() for x in re.split(r";\s|;|\s", value)]
         # generate sub-lists for multiple values
-        if len(values) > 1 or "," in values:
+        if len(values) > 1 or "," in value:
             p3_options[tag.strip()] = values
         else:
             p3_options[tag.strip()] = values[0]

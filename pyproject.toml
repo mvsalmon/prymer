@@ -1,4 +1,4 @@
 [tool.pytest.ini_options]
-pythonpaht=["."]
+pythonpath=["."]
 testpaths=["tests"]
 adopts = "--strict-markers"
