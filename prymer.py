@@ -1,6 +1,6 @@
 # TODO take file with coordinates as input?
 # TODO add PRIMER_EXPLAIN info to output file?
-
+# test
 
 import argparse
 import logging
