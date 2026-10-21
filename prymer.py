@@ -15,10 +15,16 @@ import pandas as pd
 import primer3
 from primer3 import p3helpers
 
-# Constants
-BREAKPOINT_FLANKING_BP = 50
-DEFAULT_TEMPLATE_SEQUENCE_LENGTH = 500
-DEFAULT_REFERENCE_GENOME = "hg38"
+# Argument defaults
+DEFAULTS = {
+    "template_sequence_length": 500,
+    "reference_genome": "hg38",
+    "output_path": "./",
+    "breakpoint_flanking_bp": 50,
+    "start_primer_position": "5",
+    "end_primer_position": "3"
+}
+
 
 logger = logging.getLogger(__name__)
 
@@ -132,8 +138,8 @@ class Primer:
             # update primer3 options
             self.p3_seq_tags["SEQUENCE_TEMPLATE"] = self.breakpoint_sequence
             # include breakpoint region, default 50bp either side
-            self.p3_seq_tags["SEQUENCE_TARGET"] = [DEFAULT_TEMPLATE_SEQUENCE_LENGTH - BREAKPOINT_FLANKING_BP,
-                                                   2 * BREAKPOINT_FLANKING_BP]
+            self.p3_seq_tags["SEQUENCE_TARGET"] = [args.template_sequence_length - args.breakpoint_flanking_bp,
+                                                   2 *args.breakpoint_flanking_bp]
             self.primers = self.design_primers()
 
             # write output
@@ -382,7 +388,7 @@ def prymer_main():
     )
     parser.add_argument(
         "-s",
-        "--start_coordinate",
+        "--start-coordinate",
         help="""Genomic coordinate for primer design in the format chr1:23456. 
                 Commas are allowed, but the full coordinate should be contained by quote marks in this case e.g.
                 "chr1:23,456". If --fusion_breakpoint is used, this should be the 5' breakpoint""",
@@ -390,14 +396,14 @@ def prymer_main():
     )
     parser.add_argument(
         "-e",
-        "--end_coordinate",
+        "--end-coordinate",
         help="Optional second genomic coordinate for primer design. Default None."
         "If --fusion_breakpoint is used, this is required and should be the "
         "3' breakpoint."
     )
     parser.add_argument(
         "-l",
-        "--template_sequence_length",
+        "--template-sequence-length",
         help="Length of template sequence in bp to use for primer design. For breakpoint primers, this"
         "specifies the length of sequence returned either side of the breakpoint. Default 500bp",
         type=int,
@@ -405,60 +411,62 @@ def prymer_main():
     )
     parser.add_argument(
         "-r",
-        "--reference_genome",
+        "--reference-genome",
         help="Reference genome to use. Must be valid genome that can be used with UCSC API. Default hg38.",
         default="hg38",
     )
     parser.add_argument(
         "-f",
-        "--fusion_breakpoint",
+        "--fusion-breakpoint",
         help="Specifies if primers must span a fusion breakpoint.",
         action="store_true",
     )
     # TODO change to path object/verify path is valid
     parser.add_argument(
         "-o",
-        "--output_path",
+        "--output-path",
         help="Output filepath. Defaults to current directory",
         default="./",
     )
     parser.add_argument(
         "-n",
-        "--output_name",
+        "--output-name",
         help="Output file name. Default is chrN, where N is value passed to start coordinate",
         default=None,
     )
     parser.add_argument(
-        "--start_primer_position",
+        "--start-primer-position",
         help="""Specify the 5' or 3' position of the primer relative to the breakpoint for the 
                         --start_coordinate. Choose one of 5 or 3. Default 5. Note: do not include the trailing '.""",
         default="5",
     )
     parser.add_argument(
-        "--end_primer_position",
+        "--end-primer-position",
         help="As --start_primer_position, for --end_coordinate. Default 3.",
         default="3",
     )
     parser.add_argument(
-        "--reverse_complement",
+        "--reverse-complement",
         help="Specify if either the reverse complement of either the start or end sequence is required."
         'Options are "start", "end", or "both.',
         choices=["start", "end", "both"],
     )
     parser.add_argument(
-        "--p3_global_tags",
+        "--p3-global-tags",
         nargs="*",
         help="""Specify additional primer3 global tags as a space separated list in the form "OPTION1_NAME=<value(s)>" "OPTION2_NAME=<value(s)>". 
                 The version of primer3 used is 2.6.1. See https://htmlpreview.github.io/?https://github.com/primer3-org/primer3/blob/v2.6.1/src/primer3_manual.htm
                 for details of all options available.""",
     )
     parser.add_argument(
-        "--p3_sequence_tags",
+        "--p3-sequence-tags",
         nargs="*",
         help="""Specify additional primer3 sequence tags as a space separated list in the form "OPTION1_NAME=<value(s)>" "OPTION2_NAME=<value(s)>".
          The version of primer3 used is 2.6.1. See https://htmlpreview.github.io/?https://github.com/primer3-org/primer3/blob/v2.6.1/src/primer3_manual.htm
         for details of all options available.""",
     )
+
+    parser.set_defaults(**DEFAULTS)
 
     args = parser.parse_args()
     if args.output_name is None:
