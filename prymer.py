@@ -69,7 +69,7 @@ def parse_coordinates(coordinate: str) -> Tuple[str, int]:
     return chrom, int(pos)
 
 
-def parse_primer3_opts(self, p3_opts: list) -> Dict[str, Any]:
+def parse_primer3_opts(p3_opts: list) -> Dict[str, Any]:
     """Parse inputs for primer3 global and sequence tags and return a dictionary containing primer3 options with
     appropriate formatting: Ranges should be converted to a list, lists of ranges to lists of lists.
 
@@ -91,6 +91,35 @@ def parse_primer3_opts(self, p3_opts: list) -> Dict[str, Any]:
         else:
             p3_options[tag.strip()] = values[0]
     return p3_options
+
+    # p3helpers only included in v1.2.0+
+def reverse_comp(sequence: str) -> str:
+    """Wrapper around primer3.p3helpers.reverse_complement()."""
+    return primer3.p3helpers.reverse_complement(sequence)
+
+# TODO implement p3 option handling
+def design_primers(primer3_options) -> Dict:
+    """Design PCR primers using primer3 with default options
+
+    Parameters:
+        primer3_options:
+
+    Returns:
+        Dictionary containing Primer3 output
+    """
+
+    # TODO primer design options?
+    logger.info("Designing primers...")
+    primers = primer3.design_primers(
+        seq_args=self.p3_seq_tags, global_args=self.p3_global_tags
+    )
+    parsed_primers = self._parse_primer3(primers)
+    #TODO handle this better without use of self variable.
+    self.pair_explain = primers["PRIMER_PAIR_EXPLAIN"]
+    return parsed_primers
+
+
+
 
 class Primer:
     """Class to design and manage primers. Primers designed according to input arguments and returns a .csv file with
@@ -428,16 +457,14 @@ def prymer_main():
     parser.add_argument(
         "-l",
         "--template-sequence-length",
-        help="Length of template sequence in bp to use for primer design. For breakpoint primers, this"
-        "specifies the length of sequence returned either side of the breakpoint. Default 500bp",
-        type=int,
-        default=500,
+        help=f"Length of template sequence in bp to use for primer design. For breakpoint primers, this"
+        f"specifies the length of sequence returned either side of the breakpoint. Default {DEFAULTS['template_sequence_length']}bp",
+        type=int
     )
     parser.add_argument(
         "-r",
         "--reference-genome",
-        help="Reference genome to use. Must be valid genome that can be used with UCSC API. Default hg38.",
-        default="hg38",
+        help=f"Reference genome to use. Must be valid genome that can be used with UCSC API. Default {DEFAULTS['reference_genome']}."
     )
     parser.add_argument(
         "-f",
@@ -449,25 +476,25 @@ def prymer_main():
     parser.add_argument(
         "-o",
         "--output-path",
-        help="Output filepath. Defaults to current directory",
-        default="./",
+        help=f"Output filepath. Defaults to current directory ({DEFAULTS['output_path']})",
     )
     parser.add_argument(
         "-n",
         "--output-name",
-        help="Output file name. Default is chrN, where N is value passed to start coordinate",
-        default=None,
+        help="Output file name. Default is chrN, where N is value passed to start coordinate"
     )
     parser.add_argument(
         "--start-primer-position",
-        help="""Specify the 5' or 3' position of the primer relative to the breakpoint for the 
-                        --start_coordinate. Choose one of 5 or 3. Default 5. Note: do not include the trailing '.""",
-        default="5",
+        help=f"""Specify the position of the primer relative to the breakpoint (5' or 3') for the 
+                        --start_coordinate. Choose one of 5 or 3. Default {DEFAULTS["start_primer_position"]}. 
+                        Note: do not include the trailing '.""",
+        choices=["5", "3"]
     )
     parser.add_argument(
         "--end-primer-position",
-        help="As --start_primer_position, for --end_coordinate. Default 3.",
+        help=f"As --start_primer_position, for --end_coordinate. Default {DEFAULTS['end_primer_position']}.",
         default="3",
+        choices=["5", "3"]
     )
     parser.add_argument(
         "--reverse-complement",
