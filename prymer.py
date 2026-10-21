@@ -62,7 +62,7 @@ def parse_coordinates(coordinate: str) -> Tuple[str, int]:
     """
     clean_coordinate = coordinate.replace(",", "")
 
-    if not re.fullmatch(r'chr([1-9]|1[0-9]|2[0-2]|[XY]):\d+', clean_coordinate):
+    if not re.fullmatch(r'chr([1-9]|1[0-9]|2[0-2]|[XYM]):\d+', clean_coordinate):
         raise ValueError(f"Invalid coordinates '{coordinate}'. Must be in the format 'chr1:123456'.")
 
     chrom, pos = clean_coordinate.split(":")

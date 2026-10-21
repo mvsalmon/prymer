@@ -26,8 +26,7 @@ def test_parse_valid(text, expected):
 
 @pytest.mark.parametrize(
     "bad",
-    ["1:100", "chr23:10000", "chr0:100000", "chr1:", "chr:100000", "chr1-1000", "chr1:1.000.000", "chrM:1000",
-     " chr1:1000"],
+    ["1:100", "chr23:10000", "chr0:100000", "chr1:", "chr:100000", "chr1-1000", "chr1:1.000.000", " chr1:1000"],
 )
 def test_parse_invalid(bad):
     with pytest.raises(ValueError):
