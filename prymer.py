@@ -28,6 +28,26 @@ DEFAULTS = {
 
 logger = logging.getLogger(__name__)
 
+def validate_output_path(path_str: str) -> Path:
+    """Validate the output directory exists and is writable.
+
+    Parameters:
+        path_str: String containing user-specified output directory path
+
+    Returns:
+          Output directory path.
+
+    Raises:
+        FileNotFoundError: If output directory does not exist.
+        PermissionError: If output directory is not writable.
+        """
+    path = Path(path_str)
+    if not path.exists():
+        raise FileNotFoundError(f"Output path does not exist: {path}")
+    if not os.access(path, os.W_OK):
+        raise PermissionError(f"Output path is not writable: {path}")
+    return path
+
 def parse_coordinates(coordinate: str) -> Tuple[str, int]:
     """Parse and validate coordinates (e.g. 'chr1:123456').
 
@@ -48,25 +68,29 @@ def parse_coordinates(coordinate: str) -> Tuple[str, int]:
     chrom, pos = clean_coordinate.split(":")
     return chrom, int(pos)
 
-def validate_output_path(path_str: str) -> Path:
-    """Validate the output directory exists and is writable.
+
+def parse_primer3_opts(self, p3_opts: list) -> Dict[str, Any]:
+    """Parse inputs for primer3 global and sequence tags and return a dictionary containing primer3 options with
+    appropriate formatting: Ranges should be converted to a list, lists of ranges to lists of lists.
 
     Parameters:
-        path_str: String containing user-specified output directory path
+        p3_opts: list of p3 tag:value pairs.
 
     Returns:
-          Output directory path.
+        Dictionary of primer3 input options.
+    """
 
-    Raises:
-        FileNotFoundError: If output directory does not exist.
-        PermissionError: If output directory is not writable.
-        """
-    path = Path(path_str)
-    if not path.exists():
-        raise FileNotFoundError(f"Output path does not exist: {path}")
-    if not os.access(path, os.W_OK):
-        raise PermissionError(f"Output path is not writable: {path}")
-    return path
+    p3_options = {}
+    for option in p3_opts:
+        tag, value = option.split("=")
+        # parse values with multiple options, separated with ";" or " "
+        values = [x.strip() for x in re.split(r";\s|;|\s", value)]
+        # generate sub-lists for multiple values
+        if len(values) > 1 or "," in values:
+            p3_options[tag.strip()] = values
+        else:
+            p3_options[tag.strip()] = values[0]
+    return p3_options
 
 class Primer:
     """Class to design and manage primers. Primers designed according to input arguments and returns a .csv file with
