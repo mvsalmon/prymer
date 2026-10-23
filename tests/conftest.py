@@ -1,6 +1,21 @@
 import pytest
 
 @pytest.fixture
-def sample_template():
+def sample_template_100bp():
+    """Fixed 400bp test sequence template."""
+    return "ATGC" * 100
+
+@pytest.fixture
+def sample_template_60bp():
     """Fixed 60bp test sequence template."""
     return "ATGC" * 15
+
+@pytest.fixture
+def sample_template_4bp():
+    """Fixed 4bp test sequence template."""
+    return "ATGC"
+
+@pytest.fixture
+def sample_template2_4bp():
+    """Alternate fixed 4bp test sequence template."""
+    return "GCAT"

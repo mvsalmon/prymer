@@ -93,7 +93,7 @@ def parse_primer3_opts(p3_opts: list) -> Dict[str, Any]:
     return p3_options
 
     # p3helpers only included in v1.2.0+
-def reverse_comp(sequence: str) -> str:
+def reverse_complement(sequence: str) -> str:
     """Wrapper around primer3.p3helpers.reverse_complement()."""
     return primer3.p3helpers.reverse_complement(sequence)
 
@@ -128,6 +128,23 @@ def fetch_sequence(url: str, timeout: int = 10) -> str:
     response = requests.get(url, timeout=timeout)
     response.raise_for_status()
     return response.json()
+
+def build_breakpoint(start_seq: str, end_seq: str, rev_comp: str = None) -> str:
+    """Join breakpoint sequences for fusion primers.
+    Parameters:
+        start_seq: String. Sequence of start (first) breakpoint.
+        end_seq: String. Sequence of the end (second) breakpoint.
+        rev_comp: String. Controls reverse complementation. Can be 'start', 'end', 'both', or None/empty.
+
+    Returns:
+
+
+    """
+    if rev_comp in ("start", "both"):
+        start_seq = reverse_complement(start_seq)
+    if rev_comp in ("end", "both"):
+        end_seq = reverse_complement(end_seq)
+    return start_seq + end_seq
 
 class Primer:
     """Class to design and manage primers. Primers designed according to input arguments and returns a .csv file with
