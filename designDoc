@@ -1,0 +1,35 @@
+Primer design helper program with support for multiple designs in one run.
+
+Settings: Same for every design in a run - ref. genome, output directory, primer3 global tags
+Job: One design request - coordinates, fusion or not, primer positions, rev-comp, name...
+Result: The output for one job - parsed primer pairs (+ explain string), or error.
+
+jobs = build_jobs(args)
+results = [run_job(job, settings) for job in jobs]
+write_outputs(results, settings)
+
+
+
+
+Implementing RC-PCR design.
+
+Add parameters for RC-PCR (see below)
+Add ability for bulk primer design, i.e from a list of input coordinates
+
+Key RC-PCR parameters/design process:
+
+In short I pick them by eye, keeping them as short as possible.
+I BLAT the sequence prior to design to look for regions of homology.
+When designing, where possible I keep the length between 18-25bp, that the final 4 bases are not self-complimentary
+(eg CATG)  and check that they have a Tm of circa 60C using:
+ https://tmcalculator.neb.com/#!/main
+
+ And SNP check binding sequences using:
+https://genetools.org/SNPCheck/snpcheck.htm
+
+
+the regions of interest for this project will be defined and so the locations where we can place the primers will be heavily constrained by this.
+
+Picking the target specific sequences is the time consuming bit – unless you can get AI to do it for a large number of targets.
+
+Once we have these sequences converting them to RC probes is straight forward – essentially append a tag sequence ta each of the target specific sequencing and reverse compliment the whole lot.
