@@ -129,6 +129,19 @@ def fetch_sequence(url: str, timeout: int = 10) -> str:
     response.raise_for_status()
     return response.json()
 
+def breakpoint_window(coordinate: Tuple[str, int], position: str, length: int) -> Tuple[str, int, int]:
+    """Returns (chrom, start, end) for breakpoint sequences.
+    Sequence ends at the breakpoint if the primer position is 5'.
+    Sequence starts at the breakpoint if the primer position is 3'
+    """
+    chrom, pos = coordinate
+    if position == "5":
+        return chrom, pos - length, pos
+    if position == "3":
+        return chrom, pos, pos + length
+    #raise ValueError?
+
+
 def build_breakpoint(start_seq: str, end_seq: str, rev_comp: str = None) -> str:
     """Join breakpoint sequences for fusion primers.
     Parameters:
