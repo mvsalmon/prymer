@@ -1,5 +1,10 @@
 import pytest
-from prymer import build_breakpoint, breakpoint_window
+from prymer import reverse_complement, build_breakpoint, breakpoint_window
+
+## Tests for breakpoint construction
+
+def test_reverse_complement(sample_template_4bp):
+    assert reverse_complement(sample_template_4bp) == "GCAT"
 
 @pytest.mark.parametrize(
     "rev_comp, expected",

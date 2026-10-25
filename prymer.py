@@ -142,7 +142,7 @@ def breakpoint_window(coordinate: Tuple[str, int], position: str, length: int) -
     #raise ValueError?
 
 
-def build_breakpoint(start_seq: str, end_seq: str, rev_comp: str = None) -> str:
+def build_breakpoint(start_seq: str, end_seq: str, rev_comp: str | None = None) -> str:
     """Join breakpoint sequences for fusion primers.
     Parameters:
         start_seq: String. Sequence of start (first) breakpoint.
@@ -150,8 +150,7 @@ def build_breakpoint(start_seq: str, end_seq: str, rev_comp: str = None) -> str:
         rev_comp: String. Controls reverse complementation. Can be 'start', 'end', 'both', or None/empty.
 
     Returns:
-
-
+        String of the full breakpoint sequence for primer design.
     """
     if rev_comp in ("start", "both"):
         start_seq = reverse_complement(start_seq)
