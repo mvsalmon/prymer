@@ -124,10 +124,10 @@ def build_UCSC_url(genome: str, chrom: str, start: int, end: int) -> str:
            f"genome={genome};chrom={chrom};start={start};end={end}")
 
 def fetch_sequence(url: str, timeout: int = 10) -> str:
-    """Fetch sequence from UCSC API"""
+    """Fetch sequence from UCSC API. Returns string containing target sequence."""
     response = requests.get(url, timeout=timeout)
     response.raise_for_status()
-    return response.json()
+    return response.json()['dna']
 
 def breakpoint_window(coordinate: Tuple[str, int], position: str, length: int) -> Tuple[str, int, int]:
     """Returns (chrom, start, end) for breakpoint sequences.
