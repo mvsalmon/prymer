@@ -30,13 +30,10 @@ logger = logging.getLogger(__name__)
 
 def validate_output_path(path_str: str) -> Path:
     """Validate the output directory exists and is writable.
-
     Parameters:
         path_str: String containing user-specified output directory path
-
     Returns:
           Output directory path.
-
     Raises:
         FileNotFoundError: If output directory does not exist.
         PermissionError: If output directory is not writable.
@@ -50,13 +47,10 @@ def validate_output_path(path_str: str) -> Path:
 
 def parse_coordinates(coordinate: str) -> Tuple[str, int]:
     """Parse and validate coordinates (e.g. 'chr1:123456').
-
     Parameters:
         coordinate: String containing coordinate to be validated.
-
     Returns:
         Tuple containing the chromosome (str) and position (int), e.g. ['chr1', 123456].
-
     Raises:
         ValueError: If coordinate is invalid.
     """
@@ -68,28 +62,45 @@ def parse_coordinates(coordinate: str) -> Tuple[str, int]:
     chrom, pos = clean_coordinate.split(":")
     return chrom, int(pos)
 
+def _coerce(token: str):
+    """Attempt to coerce a string to an int or float if possible, else leave as str."""
+    for caster in (int, float):
+        try:
+            return caster(token)
+        except ValueError:
+            pass
+    return token
+
+def _parse_item(item: str):
+    """Parse one item from a primer3 option:
+    '20' -> 20, '50,400' -> [50, 400], '100-300' -> [100, 300]."""
+    if "," in item:
+        return [_coerce(x) for x in item.split(",")]
+    # size ranges
+    if re.fullmatch(r"\d+-\d+", item):
+        return [int(x) for x in item.split("-")]
+    # single value
+    return _coerce(item)
 
 def parse_primer3_opts(p3_opts: list) -> Dict[str, Any]:
     """Parse inputs for primer3 global and sequence tags and return a dictionary containing primer3 options with
     appropriate formatting: Ranges should be converted to a list, lists of ranges to lists of lists.
-
     Parameters:
         p3_opts: list of p3 tag:value pairs.
-
     Returns:
         Dictionary of primer3 input options.
     """
 
     p3_options = {}
     for option in p3_opts:
-        tag, value = option.split("=")
-        # parse values with multiple options, separated with ";" or " "
-        values = [x.strip() for x in re.split(r";\s|;|\s", value)]
-        # generate sub-lists for multiple values
-        if len(values) > 1 or "," in value:
-            p3_options[tag.strip()] = values
-        else:
-            p3_options[tag.strip()] = values[0]
+        tag, _, value = option.partition("=")
+        # parse values with multiple options, split on non-alphanumeric chars.
+        items = [x for x in re.split(r"[;\s]+", value.strip()) if x]
+        parsed = [_parse_item(x) for x in items]
+
+        #
+        p3_options[tag.strip()] = parsed[0] if len(parsed) == 1 else parsed
+
     return p3_options
 
     # p3helpers only included in v1.2.0+
@@ -97,26 +108,27 @@ def reverse_complement(sequence: str) -> str:
     """Wrapper around primer3.p3helpers.reverse_complement()."""
     return primer3.p3helpers.reverse_complement(sequence)
 
-# TODO implement p3 option handling
-def design_primers(primer3_options) -> Dict:
+# TODO implement p3 option handling - separate inputs for seq_tags and global_tags
+def design_primers(template: str, seq_tags: dict, global_tags: dict) -> Dict:
     """Design PCR primers using primer3 with default options
-
     Parameters:
         primer3_options:
-
     Returns:
         Dictionary containing Primer3 output
     """
-
     # TODO primer design options?
     logger.info("Designing primers...")
-    primers = primer3.design_primers(
-        seq_args=self.p3_seq_tags, global_args=self.p3_global_tags
-    )
+    seq_args = {**seq_tags, "SEQUENCE_TEMPLATE": template}
+    primers = primer3.design_primers(seq_args=seq_tags, global_args=global_tags)
+
     parsed_primers = self._parse_primer3(primers)
     #TODO handle this better without use of self variable.
     self.pair_explain = primers["PRIMER_PAIR_EXPLAIN"]
     return parsed_primers
+
+def parse_primer3_output(raw: dict) -> dict:
+    """Parse raw primer3 output"""
+
 
 def build_UCSC_url(genome: str, chrom: str, start: int, end: int) -> str:
     """Construct URL for UCSC API request."""
@@ -186,11 +198,11 @@ class Primer:
         # set primer3 options
         self.p3_seq_tags = {"SEQUENCE_ID": self.output_name, "SEQUENCE_TEMPLATE": None}
         if args.p3_sequence_tags:
-            self.p3_seq_tags.update(self._parse_primer3_opts(args.p3_sequence_tags))
+            self.p3_seq_tags.update(parse_primer3_opts(args.p3_sequence_tags))
         if not args.p3_global_tags:
             self.p3_global_tags = {}
         else:
-            self.p3_global_tags = self._parse_primer3_opts(args.p3_global_tags)
+            self.p3_global_tags = parse_primer3_opts(args.p3_global_tags)
 
         self._run()
 
@@ -228,8 +240,8 @@ class Primer:
             # update primer3 options
             self.p3_seq_tags["SEQUENCE_TEMPLATE"] = self.breakpoint_sequence
             # include breakpoint region, default 50bp either side
-            self.p3_seq_tags["SEQUENCE_TARGET"] = [args.template_sequence_length - args.breakpoint_flanking_bp,
-                                                   2 *args.breakpoint_flanking_bp]
+            self.p3_seq_tags["SEQUENCE_TARGET"] = [self.seq_len - DEFAULTS["breakpoint_flanking_bp"],
+                                                   2 * DEFAULTS["breakpoint_flanking_bp"]]
             self.primers = self.design_primers()
 
             # write output
@@ -244,10 +256,8 @@ class Primer:
     def _parse_primer3_opts(self, p3_opts: list) -> Dict:
         """Parse inputs for primer3 global and sequence tags and return a dictionary containing primer3 options with
         appropriate formatting: Ranges should be converted to a list, lists of ranges to lists of lists.
-
         Parameters:
             p3_opts: list of p3 tag:value pairs.
-
         Returns:
             Dictionary of primer3 input options.
         """

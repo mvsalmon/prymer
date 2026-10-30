@@ -1,3 +1,18 @@
+[project]
+name = "prymer"
+version = "1.0.0"
+dependencies = [
+    "numpy==2.5.0",
+    "pandas==2.2.2",
+    "primer3-py>=2.0.0",
+    "python-dateutil==2.8.2",
+    "pytz==2022.7.1",
+    "requests==2.32.3",
+    "six==1.16.0",
+    "tzdata==2024.1",
+    "urllib3==1.26.15"
+]
+
 [tool.pytest.ini_options]
 pythonpath=["."]
 testpaths=["tests"]
