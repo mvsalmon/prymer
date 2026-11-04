@@ -25,6 +25,8 @@ DEFAULTS = {
     "end_primer_position": "3"
 }
 
+# regex for primer3 output parsing
+P3_KEY = re.compile(r"PRIMER_(?P<kind>LEFT|RIGHT|PAIR|INTERNAL)_(?P<idx>\d+)(?:_(?P<field>.+))?")
 
 logger = logging.getLogger(__name__)
 
@@ -116,7 +118,7 @@ def design_primers(template: str, seq_tags: dict, global_tags: dict) -> Dict:
     Returns:
         Dictionary containing Primer3 output
     """
-    # TODO primer design options?
+    # TODO primer design option handling
     logger.info("Designing primers...")
     seq_args = {**seq_tags, "SEQUENCE_TEMPLATE": template}
     primers = primer3.design_primers(seq_args=seq_tags, global_args=global_tags)
@@ -126,8 +128,17 @@ def design_primers(template: str, seq_tags: dict, global_tags: dict) -> Dict:
     self.pair_explain = primers["PRIMER_PAIR_EXPLAIN"]
     return parsed_primers
 
-def parse_primer3_output(raw: dict) -> dict:
-    """Parse raw primer3 output"""
+def parse_primer3_output(raw: dict) -> dict[str, dict]:
+    """Parse raw primer3 output. Ignores PRIMER_PAIR_EXPLAIN which can be accessed directly.
+    Uses P3_KEY regex"""
+    pairs: dict[str, dict] = {}
+    for key, value in raw.items():
+        m = P3_KEY.fullmatch(key)
+        if m is None:
+            continue
+        name = f"PRIMER_{m['kind']}" + (f"_{m['field']}" if m["field"] else "")
+        pairs.setdefault(f"PAIR_{m['idx']}", {})[name] = value
+    return pairs
 
 
 def build_UCSC_url(genome: str, chrom: str, start: int, end: int) -> str:

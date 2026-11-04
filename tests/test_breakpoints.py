@@ -9,17 +9,14 @@ def test_reverse_complement(sample_template_4bp):
 @pytest.mark.parametrize(
     "rev_comp, expected",
     [
-        (None, "ATGCGCAT"),
-        ("start", "GCATGCAT"),
-        ("end", "ATGCATGC"),
-        ("both", "GCATATGC")
+        (None, "AAAACCCC"),
+        ("start", "TTTTCCCC"),
+        ("end", "AAAAGGGG"),
+        ("both", "TTTTGGGG")
     ]
 )
-def test_build_breakpoint(sample_template_4bp, sample_template2_4bp,
-                          rev_comp, expected):
-    assert build_breakpoint(sample_template_4bp,
-                            sample_template2_4bp,
-                            rev_comp
+def test_build_breakpoint(rev_comp, expected, start="AAAA", end="CCCC"):
+    assert build_breakpoint(start, end, rev_comp
                             ) == expected
 
 def test_breakpoint_no_revcomp(sample_template_4bp,

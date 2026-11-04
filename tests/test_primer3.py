@@ -1,5 +1,5 @@
 import pytest
-from prymer import parse_primer3_opts
+from prymer import parse_primer3_opts, parse_primer3_output
 
 def test_comma_range():
     result = parse_primer3_opts(["PRIMER_PRODUCT_SIZE_RANGE=100-300,300-500"])
@@ -20,3 +20,7 @@ def test_comma_range():
 
 def test_p3_option_parsing(options, expected):
     assert parse_primer3_opts(options) == expected
+
+def test_parse_primer3_output(p3_raw_output):
+    result = parse_primer3_output(p3_raw_output)
+    assert "PAIR_0" in result
