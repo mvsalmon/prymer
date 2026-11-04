@@ -253,32 +253,6 @@ class Primer:
         for i in range(0, len(tag_list), n):
             yield tag_list[i : i + n]
 
-    def _parse_primer3_opts(self, p3_opts: list) -> Dict:
-        """Parse inputs for primer3 global and sequence tags and return a dictionary containing primer3 options with
-        appropriate formatting: Ranges should be converted to a list, lists of ranges to lists of lists.
-        Parameters:
-            p3_opts: list of p3 tag:value pairs.
-        Returns:
-            Dictionary of primer3 input options.
-        """
-
-        p3_options = {}
-        for option in p3_opts:
-            tag, value = option.split("=")
-            # parse values with multiple options, separated with ";" or " "
-            values = [x.strip() for x in re.split(r";\s|;|\s", value)]
-            # generate sub-lists for multiple values
-            if len(values) > 1:
-                # values = list(self._parse_tag_list(values, 1))
-                p3_options[tag.strip()] = values
-            # if value is an interval, return as list
-            elif re.search(r",", value):
-                p3_options[tag.strip()] = values
-            else:
-                p3_options[tag.strip()] = values[0]
-
-        return p3_options
-
     def UCSC_request(
         self,
         start_coordinate:str,
