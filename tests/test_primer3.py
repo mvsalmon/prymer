@@ -65,6 +65,40 @@ def test_no_primers_found_returns_empty_dict():
     }
     assert parse_primer3_output(raw) == {}
 
-def test_parse_primer3_output(p3_raw_output):
+def test_one_entry_per_returned_pair(p3_raw_output):
     result = parse_primer3_output(p3_raw_output)
-    assert "PAIR_0" in result
+    n = p3_raw_output["PRIMER_PAIR_NUM_RETURNED"]
+    assert set(result) == {f"PAIR_{i}" for i in range(n)}
+
+
+def test_every_pair_has_identical_fields(p3_raw_output):
+    # ragged pairs would become NaN cells in the output CSV
+    result = parse_primer3_output(p3_raw_output)
+    key_sets = [set(pair) for pair in result.values()]
+    assert all(keys == key_sets[0] for keys in key_sets)
+
+
+def test_expected_fields_present(p3_raw_output):
+    pair = parse_primer3_output(p3_raw_output)["PAIR_0"]
+    expected = {
+        "PRIMER_LEFT_SEQUENCE", "PRIMER_RIGHT_SEQUENCE",
+        "PRIMER_LEFT", "PRIMER_RIGHT",
+        "PRIMER_LEFT_TM", "PRIMER_RIGHT_TM",
+        "PRIMER_PAIR_PENALTY", "PRIMER_PAIR_PRODUCT_SIZE",
+    }
+    assert expected <= pair.keys()          # subset: extra keys are fine
+
+
+def test_no_pair_index_left_in_field_names(p3_raw_output):
+    result = parse_primer3_output(p3_raw_output)
+    for pair in result.values():
+        assert not any(re.search(r"\d", name) for name in pair)
+
+
+def test_known_values_for_pair_0(p3_raw_output):
+    # "golden" values copied from tests/data/p3_raw_out.json
+    pair = parse_primer3_output(p3_raw_output)["PAIR_0"]
+    assert pair["PRIMER_LEFT_SEQUENCE"] == "tcagcaggattttgacggct"
+    assert pair["PRIMER_RIGHT_SEQUENCE"] == "ATGGactctgccagatccct"
+    assert pair["PRIMER_LEFT"] == [237, 20]
+    assert pair["PRIMER_PAIR_PRODUCT_SIZE"] == 172
