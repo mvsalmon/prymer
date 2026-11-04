@@ -110,6 +110,18 @@ def reverse_complement(sequence: str) -> str:
     """Wrapper around primer3.p3helpers.reverse_complement()."""
     return primer3.p3helpers.reverse_complement(sequence)
 
+def parse_primer3_output(raw: dict) -> dict[str, dict]:
+    """Parse raw primer3 output. Ignores PRIMER_PAIR_EXPLAIN which can be accessed directly.
+    Uses P3_KEY regex"""
+    pairs: dict[str, dict] = {}
+    for key, value in raw.items():
+        m = P3_KEY.fullmatch(key)
+        if m is None:
+            continue
+        name = f"PRIMER_{m['kind']}" + (f"_{m['field']}" if m["field"] else "")
+        pairs.setdefault(f"PAIR_{m['idx']}", {})[name] = value
+    return pairs
+
 # TODO implement p3 option handling - separate inputs for seq_tags and global_tags
 def design_primers(template: str, seq_tags: dict, global_tags: dict) -> Dict:
     """Design PCR primers using primer3 with default options
@@ -123,23 +135,10 @@ def design_primers(template: str, seq_tags: dict, global_tags: dict) -> Dict:
     seq_args = {**seq_tags, "SEQUENCE_TEMPLATE": template}
     primers = primer3.design_primers(seq_args=seq_tags, global_args=global_tags)
 
-    parsed_primers = self._parse_primer3(primers)
+    parsed_primers = parse_primer3_output(primers)
     #TODO handle this better without use of self variable.
-    self.pair_explain = primers["PRIMER_PAIR_EXPLAIN"]
+    logger.info(f"Design summary: {primers["PRIMER_PAIR_EXPLAIN"]}.")
     return parsed_primers
-
-def parse_primer3_output(raw: dict) -> dict[str, dict]:
-    """Parse raw primer3 output. Ignores PRIMER_PAIR_EXPLAIN which can be accessed directly.
-    Uses P3_KEY regex"""
-    pairs: dict[str, dict] = {}
-    for key, value in raw.items():
-        m = P3_KEY.fullmatch(key)
-        if m is None:
-            continue
-        name = f"PRIMER_{m['kind']}" + (f"_{m['field']}" if m["field"] else "")
-        pairs.setdefault(f"PAIR_{m['idx']}", {})[name] = value
-    return pairs
-
 
 def build_UCSC_url(genome: str, chrom: str, start: int, end: int) -> str:
     """Construct URL for UCSC API request."""
@@ -150,7 +149,7 @@ def fetch_sequence(url: str, timeout: int = 10) -> str:
     """Fetch sequence from UCSC API. Returns string containing target sequence."""
     response = requests.get(url, timeout=timeout)
     response.raise_for_status()
-    return response.json()['dna']
+    return response.json()['dna'].upper()
 
 def breakpoint_window(coordinate: Tuple[str, int], position: str, length: int) -> Tuple[str, int, int]:
     """Returns (chrom, start, end) for breakpoint sequences.
