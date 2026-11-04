@@ -12,9 +12,9 @@ def test_comma_range():
         (["PRIMER_MIN_THREE_PRIME_DISTANCE=-1"],  {"PRIMER_MIN_THREE_PRIME_DISTANCE": -1}),
         (["SEQUENCE_INCLUDED_REGION=50,400"],  {"SEQUENCE_INCLUDED_REGION": [50, 400]}),
         (["SEQUENCE_TARGET=50,2 100,2"],   {"SEQUENCE_TARGET": [[50, 2], [100, 2]]}),
-        (["PRIMER_PRODUCT_SIZE_RANGE=100,300 400,500"],
-         {"PRIMER_PRODUCT_SIZE_RANGE": [[100, 300], [400, 500]]}),
-        (["SEQUENCE_ID=sample.1"], {"SEQUENCE_ID": 'sample.1'})
+        (["PRIMER_PRODUCT_SIZE_RANGE=100,300 400,500"],{"PRIMER_PRODUCT_SIZE_RANGE": [[100, 300], [400, 500]]}),
+        (["SEQUENCE_ID=sample.1"], {"SEQUENCE_ID": 'sample.1'}),
+        (["PRIMER_OPT_TM=60.5", "SEQUENCE_TARGET=50,2 100,2"], {"PRIMER_OPT_TM": 60.5, "SEQUENCE_TARGET": [[50, 2], [100,2]]})
     ],
 )
 
