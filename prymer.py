@@ -4,16 +4,55 @@
 
 import argparse
 import logging
-from pathlib import Path
+import os
 import re
 import sys
-from typing import Optional, Dict, AnyStr, Tuple, Any
-import os
-
+from pathlib import Path
+from typing import Optional, Dict, NamedTuple, Tuple, Any
+from dataclasses import dataclass, field
 import requests
 import pandas as pd
 import primer3
 from primer3 import p3helpers
+
+class Coordinate(NamedTuple):
+    chrom: str
+    pos: int
+
+@dataclass(frozen=True)
+class Job:
+    """Dataclass to represent a single primer design job."""
+    name: str
+    start: Coordinate
+    end: Coordinate | None = None
+    fusion: bool = False
+    start_primer_position: str = "5"
+    end_primer_position: str = "5"
+    rev_comp: str | None = None
+    seq_len: int = 500
+    flank_bp: int = 50
+    p3_seq_tags: dict = field(default_factory=dict)
+
+    def __post_init__(self):
+        if self.fusion and self.end is None:
+            raise ValueError("A fusion job needs an end coordinate.")
+
+@dataclass(frozen=True)
+class Settings:
+    """Dataclass to hold primer design settings."""
+    ref_genome: str
+    output_dir: Path
+    p3_global_tags: dict
+
+@dataclass(frozen=True)
+class Result:
+    """Dataclass to hold results of primer design job."""
+    job: Job
+    pairs: dict[str, dict]
+    explain: str
+
+
+
 
 # Argument defaults
 DEFAULTS = {
