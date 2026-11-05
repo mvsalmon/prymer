@@ -49,9 +49,6 @@ class Result:
     pairs: dict[str, dict]
     explain: str
 
-
-
-
 # Argument defaults
 DEFAULTS = {
     "template_sequence_length": 500,
@@ -210,6 +207,28 @@ def build_breakpoint(start_seq: str, end_seq: str, rev_comp: str | None = None) 
     if rev_comp in ("end", "both"):
         end_seq = reverse_complement(end_seq)
     return start_seq + end_seq
+
+def run_job(job: Job, settings: Settings, fetch=fetch_sequence) -> Result:
+    if not job.fusion:
+        raise NotImplementedError("single-locus / same-chr jobs: TODO")
+    assert job.end is not None
+
+    start_win = breakpoint_window(job.start, job.start_primer_position, job.seq_len)
+    end_win = breakpoint_window(job.end, job.end_primer_position, job.seq_len)
+
+    start_seq = fetch(build_UCSC_url(settings.ref_genome, *start_win))
+    end_seq = fetch(build_UCSC_url(settings.ref_genome, *end_win))
+
+    template = build_breakpoint(start_seq, end_seq, job.rev_comp)
+
+    junction = len(start_seq)
+    seq_tags = {
+        "SEQUENCE_TARGET": [max(0, junction - job.flank_bp), 2 * job.flank_bp],
+        **job.p3_seq_tags,
+    }
+    raw = primer_design(template, seq_tags, settings.p3_global_tags)
+    return Result(job, parse_primer3_output(raw), raw["PRIMER_PAIR_EXPLAIN"])
+
 
 class Primer:
     """Class to design and manage primers. Primers designed according to input arguments and returns a .csv file with
