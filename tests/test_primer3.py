@@ -104,7 +104,7 @@ def test_known_values_for_pair_0(p3_raw_output):
     assert pair["PRIMER_LEFT"] == [237, 20]
     assert pair["PRIMER_PAIR_PRODUCT_SIZE"] == 172
 
-def test_desing_primers_sends_template(monkeypatch):
+def test_design_primers_sends_template(monkeypatch):
     captured = {}
     def fake(seq_args, global_args):
         captured.update(seq_args)
