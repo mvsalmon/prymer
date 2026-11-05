@@ -1,7 +1,8 @@
 import pytest
-import copy
+import primer3
 import re
-from prymer import parse_primer3_opts, parse_primer3_output
+from prymer import parse_primer3_opts, parse_primer3_output, primer_design
+
 
 def test_comma_range():
     result = parse_primer3_opts(["PRIMER_PRODUCT_SIZE_RANGE=100-300,300-500"])
@@ -102,3 +103,13 @@ def test_known_values_for_pair_0(p3_raw_output):
     assert pair["PRIMER_RIGHT_SEQUENCE"] == "ATGGactctgccagatccct"
     assert pair["PRIMER_LEFT"] == [237, 20]
     assert pair["PRIMER_PAIR_PRODUCT_SIZE"] == 172
+
+def test_desing_primers_sends_template(monkeypatch):
+    captured = {}
+    def fake(seq_args, global_args):
+        captured.update(seq_args)
+        return {"PRIMER_PAIR_EXPLAIN": "ok"}
+    monkeypatch.setattr(primer3, "design_primers", fake)
+
+    primer_design("AGCT", {"SEQUENCE_ID": "a"}, {})
+    assert captured["SEQUENCE_TEMPLATE"] == "AGCT"

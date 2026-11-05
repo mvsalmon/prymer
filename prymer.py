@@ -162,22 +162,16 @@ def parse_primer3_output(raw: dict) -> dict[str, dict]:
     return pairs
 
 # TODO implement p3 option handling - separate inputs for seq_tags and global_tags
-def design_primers(template: str, seq_tags: dict, global_tags: dict) -> Dict:
+def primer_design(template: str, seq_tags: dict, global_tags: dict) -> dict:
     """Design PCR primers using primer3 with default options
     Parameters:
         primer3_options:
     Returns:
         Dictionary containing Primer3 output
     """
-    # TODO primer design option handling
     logger.info("Designing primers...")
     seq_args = {**seq_tags, "SEQUENCE_TEMPLATE": template}
-    primers = primer3.design_primers(seq_args=seq_tags, global_args=global_tags)
-
-    parsed_primers = parse_primer3_output(primers)
-    #TODO handle this better without use of self variable.
-    logger.info(f"Design summary: {primers["PRIMER_PAIR_EXPLAIN"]}.")
-    return parsed_primers
+    return primer3.design_primers(seq_args=seq_args, global_args=global_tags)
 
 def build_UCSC_url(genome: str, chrom: str, start: int, end: int) -> str:
     """Construct URL for UCSC API request."""
