@@ -1,12 +1,10 @@
 # TODO take file with coordinates as input?
 # TODO add PRIMER_EXPLAIN info to output file?
 
-
 import argparse
 import logging
 import os
 import re
-import sys
 from pathlib import Path
 from typing import Optional, Dict, NamedTuple, Tuple, Any
 from dataclasses import dataclass, field
@@ -27,7 +25,7 @@ class Job:
     end: Coordinate | None = None
     fusion: bool = False
     start_primer_position: str = "5"
-    end_primer_position: str = "5"
+    end_primer_position: str = "3"
     rev_comp: str | None = None
     seq_len: int = 500
     flank_bp: int = 50
@@ -194,7 +192,7 @@ def breakpoint_window(coordinate: Tuple[str, int], position: str, length: int) -
         return chrom, pos - length, pos
     if position == "3":
         return chrom, pos, pos + length
-    #raise ValueError?
+    raise ValueError(f"Invalid breakpoint position: {position}")
 
 
 def build_breakpoint(start_seq: str, end_seq: str, rev_comp: str | None = None) -> str:
