@@ -12,7 +12,7 @@ The output file is a csv file containing the details of the top 5 primer pairs f
 Default Primer3 design options are used, but can be controlled using `--p3-sequnce-tags` and/or `--p3-global-tags`, as specified
 by the [Primer3 v2.6.1. manual.](https://htmlpreview.github.io/?https://github.com/primer3-org/primer3/blob/v2.6.1/src/primer3_manual.htm)
 
-A single coordinate can also be provided, allowing primers to be designed around a single genomic locus. 
+A single coordinate can also be provided, allowing primers to be designed around a single genomic locus. In this case, the default behavior is to design primers that amplify a product centred on the single nucleodtide position passed to `--start-coordinate`. This can be controlled with appropriate Primer3 options.
 
 See requirements.txt for a list of dependencies.
 

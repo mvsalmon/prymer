@@ -1,5 +1,5 @@
 import pytest
-from prymer import reverse_complement, build_breakpoint, breakpoint_window
+from prymer import reverse_complement, build_breakpoint, breakpoint_window,single_locus_window
 
 ## Tests for breakpoint construction
 
@@ -32,3 +32,12 @@ def test_breakpoint_no_revcomp(sample_template_4bp,
 )
 def test_breakpoint_window(position, expected):
     assert breakpoint_window(("chr1", 1000), position, 500) == expected
+
+@pytest.mark.parametrize(
+    "coordinate, length, expected",
+    [(("chr1", 1000), 500, ("chr1", 500, 1500)),
+     (("chr15", 10000), 500, ("chr15", 9500, 10500))]
+)
+
+def test_single_locus_window(coordinate, length, expected):
+    assert single_locus_window(coordinate, length) == expected

@@ -180,9 +180,9 @@ def fetch_sequence(url: str, timeout: int = 10) -> str:
     return response.json()['dna'].upper()
 
 def breakpoint_window(coordinate: Tuple[str, int], position: str, length: int) -> Tuple[str, int, int]:
-    """Returns (chrom, start, end) for breakpoint sequences.
-    Sequence ends at the breakpoint if the primer position is 5'.
-    Sequence starts at the breakpoint if the primer position is 3'
+    """Returns (chrom, start, end) for breakpoint template sequences.
+    Sequence ends at the breakpoint if the primer position is 5' (default for start pos).
+    Sequence starts at the breakpoint if the primer position is 3' (default for end pos).
     """
     chrom, pos = coordinate
     if position == "5":
@@ -191,6 +191,11 @@ def breakpoint_window(coordinate: Tuple[str, int], position: str, length: int) -
         return chrom, pos, pos + length
     raise ValueError(f"Invalid breakpoint position: {position}")
 
+def single_locus_window(coordinate: Tuple[str, int], length: int) -> Tuple[str, int, int]:
+    """Returns (chrom, start, end) window for single locus templates.
+    e.g. for a single coordinate 'chr1:1000' and length 500, we return ('chr1', 500, 1500)"""
+    chrom, pos = coordinate
+    return chrom, pos - length, pos + length
 
 def build_breakpoint(start_seq: str, end_seq: str, rev_comp: str | None = None) -> str:
     """Join breakpoint sequences for fusion primers.
@@ -209,23 +214,48 @@ def build_breakpoint(start_seq: str, end_seq: str, rev_comp: str | None = None) 
     return start_seq + end_seq
 
 def run_job(job: Job, settings: Settings, fetch=fetch_sequence) -> Result:
+    """Runs primer design job.
+    Parameters:
+        job: Job object
+        settings: Settings object
+        fetch: Dependency injection of fetch_sequence function.
+    Returns:
+        Result object containing parsed primer3 output"""
+    # Primers for single locus (i.e. non-fusion/SV)
+    # TODO add tests for single locus job
     if not job.fusion:
-        raise NotImplementedError("single-locus / same-chr jobs: TODO")
-    assert job.end is not None
+        template_win = single_locus_window(job.start, job.seq_len)
+        template = fetch(build_UCSC_url(settings.ref_genome, *template_win))
 
-    start_win = breakpoint_window(job.start, job.start_primer_position, job.seq_len)
-    end_win = breakpoint_window(job.end, job.end_primer_position, job.seq_len)
+        # Validate rev_comp option somewhere prior?
+        if job.rev_comp == "start":
+            template = reverse_complement(template)
+        elif job.rev_comp == "end" or job.rev_comp == "both":
+            raise ValueError(f"Invalid reverse complement option '{job.rev_comp}' for single-locus primer design.")
 
-    start_seq = fetch(build_UCSC_url(settings.ref_genome, *start_win))
-    end_seq = fetch(build_UCSC_url(settings.ref_genome, *end_win))
+        seq_target = len(template) // 2
+        seq_tags = {
+            "SEQUENCE_TARGET": [seq_target, seq_target + 1],
+            **job.p3_seq_tags,
+        }
 
-    template = build_breakpoint(start_seq, end_seq, job.rev_comp)
+    else:
+        assert job.end is not None
 
-    junction = len(start_seq)
-    seq_tags = {
-        "SEQUENCE_TARGET": [max(0, junction - job.flank_bp), 2 * job.flank_bp],
-        **job.p3_seq_tags,
-    }
+        start_win = breakpoint_window(job.start, job.start_primer_position, job.seq_len)
+        end_win = breakpoint_window(job.end, job.end_primer_position, job.seq_len)
+
+        start_seq = fetch(build_UCSC_url(settings.ref_genome, *start_win))
+        end_seq = fetch(build_UCSC_url(settings.ref_genome, *end_win))
+
+        template = build_breakpoint(start_seq, end_seq, job.rev_comp)
+
+        junction = len(start_seq)
+        seq_tags = {
+            "SEQUENCE_TARGET": [max(0, junction - job.flank_bp), 2 * job.flank_bp],
+            **job.p3_seq_tags,
+        }
+
     raw = primer_design(template, seq_tags, settings.p3_global_tags)
     return Result(job, parse_primer3_output(raw), raw["PRIMER_PAIR_EXPLAIN"])
 
