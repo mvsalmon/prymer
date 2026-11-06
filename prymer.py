@@ -1,4 +1,5 @@
-# TODO take file with coordinates as input?
+# TODO take file with coordinates as input for multi job runs
+# TODO handle a design job where the input is a single range, not just a single nucleotide
 # TODO add PRIMER_EXPLAIN info to output file?
 
 import argparse
@@ -81,7 +82,7 @@ def validate_output_path(path_str: str) -> Path:
         raise PermissionError(f"Output path is not writable: {path}")
     return path
 
-def parse_coordinates(coordinate: str) -> Tuple[str, int]:
+def parse_coordinates(coordinate: str) -> Coordinate[str, int]:
     """Parse and validate coordinates (e.g. 'chr1:123456').
     Parameters:
         coordinate: String containing coordinate to be validated.
@@ -96,7 +97,14 @@ def parse_coordinates(coordinate: str) -> Tuple[str, int]:
         raise ValueError(f"Invalid coordinates '{coordinate}'. Must be in the format 'chr1:123456'.")
 
     chrom, pos = clean_coordinate.split(":")
-    return chrom, int(pos)
+    return Coordinate(chrom, int(pos))
+
+def coordinate_arg(text: str) -> Coordinate:
+    """argparse 'type=' adapter: turns ValueError into clean usage error."""
+    try:
+        return parse_coordinates(text)
+    except ValueError as err:
+        raise argparse.ArgumentTypeError(str(err)) from err
 
 def _coerce(token: str):
     """Attempt to coerce a string to an int or float if possible, else leave as str."""
@@ -227,12 +235,6 @@ def run_job(job: Job, settings: Settings, fetch=fetch_sequence) -> Result:
     if not job.sv:
         template_win = single_locus_window(job.start, job.seq_len)
         template = fetch(build_UCSC_url(settings.ref_genome, *template_win))
-
-        # Validate rev_comp option somewhere prior?
-        if job.rev_comp == "start":
-            template = reverse_complement(template)
-        elif job.rev_comp == "end" or job.rev_comp == "both":
-            raise ValueError(f"Invalid reverse complement option '{job.rev_comp}' for single-locus primer design.")
 
         seq_target = len(template) // 2
         seq_tags = {
@@ -540,6 +542,80 @@ class Primer:
         # Show primer design details - useful if no pairs returned
         logger.info("Design details: %s",self.pair_explain)
 
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="prymer",
+        description="Design PCR primers for given genomic coordinates"
+    )
+    parser.add_argument(
+        "-s", "--start-coordinate", type=coordinate_arg, required=True,
+        help="""Genomic coordinate e.g "chr1:23,456" (quoted if it has commas). 
+                With --sv-breakpoint, this is the 5' breakpoint""",
+   )
+    parser.add_argument(
+        "-e", "--end-coordinate", type=coordinate_arg,
+        help="Optional second genomic coordinate. Required with --sv-breakpoint (the 3' breakpoint)"
+    )
+    parser.add_argument(
+        "-l", "--template-sequence-length", type=int,
+        default=DEFAULTS["template_sequence_length"],
+        help="Length of template sequence (in bp) in which primers will be designed." 
+             "For SV, this is per-side of the breakpoint. Default: %(default)s"
+    )
+    parser.add_argument(
+        "-r", "--reference-genome", default=DEFAULTS["reference_genome"],
+        help="UCSC genome name. Default: %(default)s."
+    )
+    parser.add_argument(
+        "-f", "--sv-breakpoint", action="store_true",
+        help="Design primers spanning an SV breakpoint. i.e. --start-cordinate and --end-cordinate are two regions that are normally non-contiguous",
+    )
+    # TODO change to path object/verify path is valid
+    parser.add_argument(
+        "-o", "--output-path", type=Path, default=DEFAULTS["output_path"],
+        help="Output filepath. Defaults: current directory",
+    )
+    parser.add_argument(
+        "-n", "--output-name",
+        help="Output file name (no extension). Default derived from coordinates"
+    )
+    parser.add_argument(
+        "--start-primer-position", choices=["5", "3"],
+        default=DEFAULTS["start_primer_position"],
+        help=f"""Specify the position of the primer relative to the breakpoint (5' or 3') for the 
+                        --start_coordinate. Choose one of 5 or 3. Default %(default)s. 
+                        Note: do not include the trailing apostrophe."""
+    )
+    parser.add_argument(
+        "--end-primer-position", choices=["5", "3"],
+        default=DEFAULTS["end_primer_position"],
+        help=f"As --start_primer_position, for --end_coordinate. Default %(default)s.",
+    )
+    parser.add_argument(
+        "--reverse-complement", choices=["start", "end", "both"],
+        help="Reverse complement the template sequence(s)."
+    )
+    parser.add_argument(
+        "--p3-global-tags", nargs="*", default=[], metavar="TAG=VALUE",
+        help="""Specify additional primer3 global tags as a space separated list in the form "OPTION1_NAME=<value(s)>" "OPTION2_NAME=<value(s)>". 
+                The version of primer3 used is 2.6.1. See https://htmlpreview.github.io/?https://github.com/primer3-org/primer3/blob/v2.6.1/src/primer3_manual.htm
+                for details of all options available.""",
+    )
+    parser.add_argument(
+        "--p3-sequence-tags", nargs="*", default=[], metavar="TAG=VALUE",
+        help="""Specify additional primer3 sequence tags as a space separated list in the form "OPTION1_NAME=<value(s)>" "OPTION2_NAME=<value(s)>".
+         The version of primer3 used is 2.6.1. See https://htmlpreview.github.io/?https://github.com/primer3-org/primer3/blob/v2.6.1/src/primer3_manual.htm
+        for details of all options available.""",
+    )
+    return parser
+
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    """Parse and validate input args."""
+    parser = build_parser()
+    args = parser.parse_args(argv)
+
+    if args.sv_breakpoint and args.end_coordinate is None:
+        parser.error("--end-coordinate is required with --sv-brakpoint")
 
 def prymer_main():
     logging.basicConfig(
