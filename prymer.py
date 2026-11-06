@@ -133,6 +133,7 @@ def _parse_item(item: str):
 def parse_primer3_opts(p3_opts: list) -> Dict[str, Any]:
     """Parse inputs for primer3 global and sequence tags and return a dictionary containing primer3 options with
     appropriate formatting: Ranges should be converted to a list, lists of ranges to lists of lists.
+    each option should be in the format 'TAG=VALUE'.
     Parameters:
         p3_opts: list of p3 tag:value pairs.
     Returns:
@@ -141,12 +142,13 @@ def parse_primer3_opts(p3_opts: list) -> Dict[str, Any]:
 
     p3_options = {}
     for option in p3_opts:
+        if "=" not in option:
+            raise ValueError(f"Missing '=' in primer3 option '{option}'.")
         tag, _, value = option.partition("=")
         # parse values with multiple options, split on non-alphanumeric chars.
         items = [x for x in re.split(r"[;\s]+", value.strip()) if x]
         parsed = [_parse_item(x) for x in items]
 
-        #
         p3_options[tag.strip()] = parsed[0] if len(parsed) == 1 else parsed
 
     return p3_options
@@ -624,6 +626,36 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         # Catch this for now, want to implement a range input later
         parser.error("Using --start-coordinate and --end-coordinate together requires --sv-breakpoint.")
     return args
+
+def default_job_name(start: Coordinate, end: Coordinate | None) -> str:
+    """Generate a default job name from input coordinates."""
+    name = f"{start.chrom}_{start.pos}"
+    return name if end is None else f"{name}_{end.chrom}_{end.pos}"
+
+def settings_from_args(args: argparse.Namespace) -> Settings:
+    """Generate Settings object from arguments"""
+    return Settings(
+        ref_genome=args.ref_genome,
+        output_dir=validate_output_path(args.output_dir),
+        p3_global_tags=parse_primer3_opts(args.p3_global_tags)
+    )
+
+def jobs_from_args(args: argparse.Namespace) -> list[Job]:
+    """Generate Job objects from arguments.
+    Returns a list of Job objects"""
+    return [
+        Job(
+            name=args.output_name or default_job_name(args.start_coordinate, args.end_coordinate),
+            start=args.start_coordinate,
+            end=args.end_coordinate,
+            sv=args.sv_breakpoint,
+            start_primer_position=args.start_primer_position,
+            end_primer_position=args.end_primer_position,
+            rev_comp=args.reverse_complement,
+            seq_len=args.template_sequence_length,
+            p3_seq_tags=parse_primer3_opts(args.p3_sequence_tags),
+        )
+    ]
 
 def prymer_main():
     logging.basicConfig(

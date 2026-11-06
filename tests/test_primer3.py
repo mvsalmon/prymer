@@ -113,3 +113,15 @@ def test_design_primers_sends_template(monkeypatch):
 
     primer_design("AGCT", {"SEQUENCE_ID": "a"}, {})
     assert captured["SEQUENCE_TEMPLATE"] == "AGCT"
+
+@pytest.mark.parametrize(
+    "option",
+    [
+        ["PRIMER_OPT_TM 60.5"],
+        [["PRIMER_OPT_TM60.5"]],
+    ]
+)
+
+def test_missing_equals(option):
+     with pytest.raises(ValueError):
+         assert parse_primer3_opts(option)
