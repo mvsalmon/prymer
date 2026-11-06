@@ -195,6 +195,9 @@ def single_locus_window(coordinate: Tuple[str, int], length: int) -> Tuple[str, 
     """Returns (chrom, start, end) window for single locus templates.
     e.g. for a single coordinate 'chr1:1000' and length 500, we return ('chr1', 500, 1500)"""
     chrom, pos = coordinate
+    # catch case where length could make start negative
+    if pos - length < 0:
+        raise ValueError(f"Template sequence start = {pos - length}.Must be greater than 0, try a shorter --template-sequence-length.")
     return chrom, pos - length, pos + length
 
 def build_breakpoint(start_seq: str, end_seq: str, rev_comp: str | None = None) -> str:
