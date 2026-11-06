@@ -23,7 +23,7 @@ class Job:
     name: str
     start: Coordinate
     end: Coordinate | None = None
-    fusion: bool = False
+    sv: bool = False
     start_primer_position: str = "5"
     end_primer_position: str = "3"
     rev_comp: str | None = None
@@ -32,7 +32,7 @@ class Job:
     p3_seq_tags: dict = field(default_factory=dict)
 
     def __post_init__(self):
-        if self.fusion and self.end is None:
+        if self.sv and self.end is None:
             raise ValueError("A fusion job needs an end coordinate.")
 
 @dataclass(frozen=True)
@@ -156,7 +156,6 @@ def parse_primer3_output(raw: dict) -> dict[str, dict]:
         pairs.setdefault(f"PAIR_{m['idx']}", {})[name] = value
     return pairs
 
-# TODO implement p3 option handling - separate inputs for seq_tags and global_tags
 def primer_design(template: str, seq_tags: dict, global_tags: dict) -> dict:
     """Design PCR primers using primer3 with default options
     Parameters:
@@ -225,8 +224,7 @@ def run_job(job: Job, settings: Settings, fetch=fetch_sequence) -> Result:
     Returns:
         Result object containing parsed primer3 output"""
     # Primers for single locus (i.e. non-fusion/SV)
-    # TODO add tests for single locus job
-    if not job.fusion:
+    if not job.sv:
         template_win = single_locus_window(job.start, job.seq_len)
         template = fetch(build_UCSC_url(settings.ref_genome, *template_win))
 
@@ -582,8 +580,8 @@ def prymer_main():
     )
     parser.add_argument(
         "-f",
-        "--fusion-breakpoint",
-        help="Specifies if primers must span a fusion breakpoint.",
+        "--SV-breakpoint",
+        help="Specifies if primers must span an SV breakpoint. i.e. --start-cordinate and --end-cordinate are two regions that are normally non-contiguous",
         action="store_true",
     )
     # TODO change to path object/verify path is valid
