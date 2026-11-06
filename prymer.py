@@ -570,7 +570,6 @@ def build_parser() -> argparse.ArgumentParser:
         "-f", "--sv-breakpoint", action="store_true",
         help="Design primers spanning an SV breakpoint. i.e. --start-cordinate and --end-cordinate are two regions that are normally non-contiguous",
     )
-    # TODO change to path object/verify path is valid
     parser.add_argument(
         "-o", "--output-path", type=Path, default=DEFAULTS["output_path"],
         help="Output filepath. Defaults: current directory",
@@ -610,12 +609,20 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    """Parse and validate input args."""
+    """Parse and check input args."""
     parser = build_parser()
     args = parser.parse_args(argv)
 
     if args.sv_breakpoint and args.end_coordinate is None:
         parser.error("--end-coordinate is required with --sv-brakpoint")
+    if args.reverse_complement and not args.sv_breakpoint:
+        parser.error("--reverse_complement only allowed with --sv-breakpoint.")
+    if args.template_squence_length < 1:
+        parser.error("--template_sequence_length must be a positive integer.")
+    if args.start_coordinate and args.end_coordinate and args.sv_breakpoint is None:
+        # Catch this for now, want to implement a range input later
+        parser.error("Using --start-coordinate and --end-coordinate together requires --sv-breakpoint.")
+    return args
 
 def prymer_main():
     logging.basicConfig(
