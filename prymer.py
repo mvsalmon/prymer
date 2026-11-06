@@ -54,6 +54,9 @@ class Result:
     pairs: dict[str, dict]
     explain: str
 
+class UCSCError(Exception):
+    """Raised when UCSC request fails."""
+
 # Argument defaults
 DEFAULTS = {
     "template_sequence_length": 500,
@@ -189,8 +192,11 @@ def build_UCSC_url(genome: str, chrom: str, start: int, end: int) -> str:
 
 def fetch_sequence(url: str, timeout: int = 10) -> str:
     """Fetch sequence from UCSC API. Returns string containing target sequence."""
-    response = requests.get(url, timeout=timeout)
-    response.raise_for_status()
+    try:
+        response = requests.get(url, timeout=timeout)
+        response.raise_for_status()
+    except requests.RequestException as err:
+        raise UCSCError(f"UCSC request failed: {err}") from err
     return response.json()['dna'].upper()
 
 def breakpoint_window(coordinate: Tuple[str, int], position: str, length: int) -> Tuple[str, int, int]:
