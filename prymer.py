@@ -139,11 +139,12 @@ def parse_primer3_opts(p3_opts: list) -> Dict[str, Any]:
     Returns:
         Dictionary of primer3 input options.
     """
-
     p3_options = {}
     for option in p3_opts:
+
         if "=" not in option:
             raise ValueError(f"Missing '=' in primer3 option '{option}'.")
+
         tag, _, value = option.partition("=")
         # parse values with multiple options, split on non-alphanumeric chars.
         items = [x for x in re.split(r"[;\s]+", value.strip()) if x]
@@ -657,12 +658,40 @@ def jobs_from_args(args: argparse.Namespace) -> list[Job]:
         )
     ]
 
+def write_output(result: Result, output_dir: Path) -> Path | None:
+    """Write results of one Job to disk. Returns the path or None if no primers."""
+    logger.info("%s: %s", result.job.name, result.explain)
+    if not result.pairs:
+        logger.warning("%s: Primer3 found no valid primers\n"
+                       "%s", result.job.name, result.explain)
+        return None
+    path = output_dir / f"{result.job.name}.csv"
+    pd.DataFrame.from_dict(result.pairs).to_csv(path)
+    return path
+
+def write_outputs(results: list[Result], settings: Settings) -> list[Path]:
+    paths = (write_output(r, settings.output_dir) for r in results)
+    return [p for p in paths if p is not None]
+
+logger = logging.getLogger(__name__)
+def main(argv: list[str] | None = None, fetch=fetch_sequence) -> int:
+   logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
+   args = parse_args(argv)
+   try:
+       settings = settings_from_args(args)
+       jobs = jobs_from_args(args)
+       results = [run_job(job, settings, fetch=fetch) for job in jobs]
+       write_outputs(results, settings)
+   except (ValueError, UCSCError, OSError) as err:
+       logger.error("%s", err)
+       return 1
+   return 0
+
 def prymer_main():
     logging.basicConfig(
         level=logging.INFO,
         format="%(levelname)s: %(message)s"
     )
-    logger = logging.getLogger(__name__)
 
     parser = argparse.ArgumentParser(
         description="Design PCR primers for given genomic coordinates"
@@ -755,4 +784,4 @@ def prymer_main():
 
 
 if __name__ == "__main__":
-    prymer_main()
+    raise SystemExit(main())
