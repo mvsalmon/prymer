@@ -249,7 +249,7 @@ def run_job(job: Job, settings: Settings, fetch=fetch_sequence) -> Result:
 
         seq_target = len(template) // 2
         seq_tags = {
-            "SEQUENCE_TARGET": [seq_target, seq_target + 1],
+            "SEQUENCE_TARGET": [seq_target, 1],
             **job.p3_seq_tags,
         }
 
