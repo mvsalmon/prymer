@@ -6,6 +6,7 @@ import argparse
 import logging
 import os
 import re
+import json
 from pathlib import Path
 from typing import Optional, Dict, NamedTuple, Tuple, Any
 from dataclasses import dataclass, field
@@ -196,7 +197,7 @@ def fetch_sequence(url: str, timeout: int = 10) -> str:
         response = requests.get(url, timeout=timeout)
         response.raise_for_status()
     except requests.RequestException as err:
-        raise UCSCError(f"UCSC request failed: {err}") from err
+        raise UCSCError(f"UCSC request failed: {err}\n {json.loads(err.response.text)["error"]}") from err
     return response.json()['dna'].upper()
 
 def breakpoint_window(coordinate: Tuple[str, int], position: str, length: int) -> Tuple[str, int, int]:
@@ -627,7 +628,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         parser.error("--end-coordinate is required with --sv-brakpoint")
     if args.reverse_complement and not args.sv_breakpoint:
         parser.error("--reverse_complement only allowed with --sv-breakpoint.")
-    if args.template_squence_length < 1:
+    if args.template_sequence_length < 1:
         parser.error("--template_sequence_length must be a positive integer.")
     if args.start_coordinate and args.end_coordinate and args.sv_breakpoint is None:
         # Catch this for now, want to implement a range input later
@@ -642,8 +643,8 @@ def default_job_name(start: Coordinate, end: Coordinate | None) -> str:
 def settings_from_args(args: argparse.Namespace) -> Settings:
     """Generate Settings object from arguments"""
     return Settings(
-        ref_genome=args.ref_genome,
-        output_dir=validate_output_path(args.output_dir),
+        ref_genome=args.reference_genome,
+        output_dir=validate_output_path(args.output_path),
         p3_global_tags=parse_primer3_opts(args.p3_global_tags)
     )
 
@@ -679,7 +680,7 @@ def write_outputs(results: list[Result], settings: Settings) -> list[Path]:
     paths = (write_output(r, settings.output_dir) for r in results)
     return [p for p in paths if p is not None]
 
-logger = logging.getLogger(__name__)
+
 def main(argv: list[str] | None = None, fetch=fetch_sequence) -> int:
    logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
    args = parse_args(argv)
