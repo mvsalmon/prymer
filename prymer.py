@@ -34,12 +34,17 @@ class Job:
     p3_seq_tags: dict = field(default_factory=dict)
 
     def __post_init__(self):
+        # Validation of various Job params
         if self.sv and self.end is None:
             raise ValueError("SV design jobs need an end coordinate.")
         if self.start.pos - self.seq_len < 0:
             raise ValueError(
                 f"Template sequence start = {self.start.pos - self.seq_len}. Must be greater than 0; "
                 "try a shorter --template-sequence-length.")
+        if not self.sv and self.end is not None and self.start.chrom != self.end.chrom:
+            raise ValueError(f"{self.start.chrom} and {self.end.chrom} differ; use --sv-breakpoint "
+                             "or check coordinates.")
+
 
 @dataclass(frozen=True)
 class Settings:
