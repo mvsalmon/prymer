@@ -223,6 +223,13 @@ def single_locus_window(coordinate: Tuple[str, int], length: int) -> Tuple[str, 
     chrom, pos = coordinate
     return chrom, pos - length, pos + length
 
+def single_chrom_range_window(start_coordinate: Coordinate, end_coordinate: Coordinate,
+                              length: int) -> Tuple[str, int, int]:
+    """Returns (chrom, start, end) window for target range on single chrom."""
+    chrom, start_pos = start_coordinate
+    end_pos = end_coordinate.pos
+    return chrom, start_pos - length, end_pos + length
+
 def build_breakpoint(start_seq: str, end_seq: str, rev_comp: str | None = None) -> str:
     """Join breakpoint sequences for fusion primers.
     Parameters:
@@ -248,16 +255,27 @@ def run_job(job: Job, settings: Settings, fetch=fetch_sequence) -> Result:
     Returns:
         Result object containing parsed primer3 output"""
     # Primers for single locus (i.e. non-fusion/SV)
-    if not job.sv:
+    if not job.sv and job.end is None:
         template_win = single_locus_window(job.start, job.seq_len)
         template = fetch(build_UCSC_url(settings.ref_genome, *template_win))
 
-        seq_target = len(template) // 2
+        # Target is 2bp in middle of the template
+        seq_target_pos = len(template) // 2
         seq_tags = {
-            "SEQUENCE_TARGET": [seq_target, 1],
+            "SEQUENCE_TARGET": [seq_target_pos, 1],
             **job.p3_seq_tags,
         }
+    # Primers where start and end specify the template range
+    elif not job.sv and job.end is not None:
+        template_win = single_chrom_range_window(job.start, job.end, job.seq_len)
+        template = fetch(build_UCSC_url(settings.ref_genome, *template_win))
 
+        # Target is the range between start and end pos which begins after job.seq_len bp
+        seq_target_len = job.end.pos - job.start.pos
+        seq_tags = {
+            "SEQUENCE_TARGET": [job.seq_len, seq_target_len],
+            **job.p3_seq_tags,
+        }
     else:
         assert job.end is not None
 
@@ -290,12 +308,13 @@ def build_parser() -> argparse.ArgumentParser:
    )
     parser.add_argument(
         "-e", "--end-coordinate", type=coordinate_arg,
-        help="Optional second genomic coordinate. Required with --sv-breakpoint (the 3' breakpoint)"
+        help="Optional second genomic coordinate. Specifies the end of the PCR target range."
+             "When --sv-breakpoint is used, this is mandatory and specifies the 3' breakpoint location."
     )
     parser.add_argument(
         "-l", "--template-sequence-length", type=int,
         default=DEFAULTS["template_sequence_length"],
-        help="Length of template sequence (in bp) in which primers will be designed." 
+        help="Length of template sequence (in bp) around the target sequence in which primers will be designed." 
              "For SV, this is per-side of the breakpoint. Default: %(default)s"
     )
     parser.add_argument(

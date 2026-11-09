@@ -1,5 +1,6 @@
 import pytest
-from prymer import reverse_complement, build_breakpoint, breakpoint_window,single_locus_window
+from prymer import (Coordinate, reverse_complement, build_breakpoint, breakpoint_window, single_locus_window,
+                    single_chrom_range_window)
 
 ## Tests for breakpoint construction
 
@@ -42,3 +43,7 @@ def test_breakpoint_window(position, expected):
 def test_single_locus_window(coordinate, length, expected):
     assert single_locus_window(coordinate, length) == expected
 
+def test_single_chrom_range_window():
+    start = Coordinate("chr1", 10000)
+    end = Coordinate("chr1", 10100)
+    assert single_chrom_range_window(start, end, length=500) == ("chr1", 9500, 10600)
