@@ -54,3 +54,7 @@ def test_write_output_skips_empty(tmp_path):
 def test_main_returns_1_for_missing_output_dir(tmp_path):
     missing = tmp_path / "nope"
     assert main(["-s", "chr1:1000", "-o", str(missing)]) == 1
+
+def test_negative_start():
+    with pytest.raises(ValueError):
+        Job(name="x", start=Coordinate("chr1", 200))

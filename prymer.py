@@ -78,6 +78,26 @@ P3_KEY = re.compile(r"PRIMER_(?P<kind>LEFT|RIGHT|PAIR|INTERNAL)_(?P<idx>\d+)(?:_
 
 logger = logging.getLogger(__name__)
 
+def _coerce(token: str):
+    """Attempt to coerce a string to an int or float if possible, else leave as str."""
+    for caster in (int, float):
+        try:
+            return caster(token)
+        except ValueError:
+            pass
+    return token
+
+def _parse_item(item: str):
+    """Parse one item from a primer3 option:
+    '20' -> 20, '50,400' -> [50, 400], '100-300' -> [100, 300]."""
+    if "," in item:
+        return [_coerce(x) for x in item.split(",")]
+    # size ranges
+    if re.fullmatch(r"\d+-\d+", item):
+        return [int(x) for x in item.split("-")]
+    # single value
+    return _coerce(item)
+
 def validate_output_path(path_str: str) -> Path:
     """Validate the output directory exists and is writable.
     Parameters:
@@ -118,26 +138,6 @@ def coordinate_arg(text: str) -> Coordinate:
         return parse_coordinates(text)
     except ValueError as err:
         raise argparse.ArgumentTypeError(str(err)) from err
-
-def _coerce(token: str):
-    """Attempt to coerce a string to an int or float if possible, else leave as str."""
-    for caster in (int, float):
-        try:
-            return caster(token)
-        except ValueError:
-            pass
-    return token
-
-def _parse_item(item: str):
-    """Parse one item from a primer3 option:
-    '20' -> 20, '50,400' -> [50, 400], '100-300' -> [100, 300]."""
-    if "," in item:
-        return [_coerce(x) for x in item.split(",")]
-    # size ranges
-    if re.fullmatch(r"\d+-\d+", item):
-        return [int(x) for x in item.split("-")]
-    # single value
-    return _coerce(item)
 
 def parse_primer3_opts(p3_opts: list) -> Dict[str, Any]:
     """Parse inputs for primer3 global and sequence tags and return a dictionary containing primer3 options with

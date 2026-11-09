@@ -42,6 +42,3 @@ def test_breakpoint_window(position, expected):
 def test_single_locus_window(coordinate, length, expected):
     assert single_locus_window(coordinate, length) == expected
 
-def test_negative_start():
-    with pytest.raises(ValueError):
-        assert single_locus_window(("chr1", 100), 500)
