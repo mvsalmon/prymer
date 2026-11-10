@@ -230,6 +230,14 @@ def single_chrom_range_window(start_coordinate: Coordinate, end_coordinate: Coor
     end_pos = end_coordinate.pos
     return chrom, start_pos - length, end_pos + length
 
+def default_product_size_range(target_len: int, global_tags: dict, slack_bp: int = 100) -> list[int]:
+    """Calculate the product size range [min, max] based on input coordinates when a same chrom range is given
+    Minimum: target_len + shortest primer on each side
+    Maximum: Minimum + slack_bp per side (to avoid filling the whole template."""
+    min_primer = global_tags.get("PRIMER_MIN_SIZE", 18)
+    lower = target_len + 2 * min_primer
+    return [lower, lower + 2 * slack_bp]
+
 def build_breakpoint(start_seq: str, end_seq: str, rev_comp: str | None = None) -> str:
     """Join breakpoint sequences for fusion primers.
     Parameters:
@@ -254,12 +262,15 @@ def run_job(job: Job, settings: Settings, fetch=fetch_sequence) -> Result:
         fetch: Dependency injection of fetch_sequence function.
     Returns:
         Result object containing parsed primer3 output"""
+
+    global_tags = settings.p3_global_tags
+
     # Primers for single locus (i.e. non-fusion/SV)
     if not job.sv and job.end is None:
         template_win = single_locus_window(job.start, job.seq_len)
         template = fetch(build_UCSC_url(settings.ref_genome, *template_win))
 
-        # Target is 2bp in middle of the template
+        # Target is 1bp in middle of the template
         seq_target_pos = len(template) // 2
         seq_tags = {
             "SEQUENCE_TARGET": [seq_target_pos, 1],
@@ -269,13 +280,25 @@ def run_job(job: Job, settings: Settings, fetch=fetch_sequence) -> Result:
     elif not job.sv and job.end is not None:
         template_win = single_chrom_range_window(job.start, job.end, job.seq_len)
         template = fetch(build_UCSC_url(settings.ref_genome, *template_win))
-
         # Target is the range between start and end pos which begins after job.seq_len bp
         seq_target_len = job.end.pos - job.start.pos
         seq_tags = {
             "SEQUENCE_TARGET": [job.seq_len, seq_target_len],
             **job.p3_seq_tags,
         }
+        # Calculate Primer product size range based on target size
+        product_size_range = default_product_size_range(seq_target_len, settings.p3_global_tags)
+        global_tags = {
+            "PRIMER_PRODUCT_SIZE_RANGE": product_size_range,
+            **settings.p3_global_tags,
+        }
+        # Check range size is valid
+        rng = global_tags["PRIMER_PRODUCT_SIZE_RANGE"]
+        ranges = rng if isinstance(rng[0], list) else [rng]
+        min_possible = seq_target_len + 2 * global_tags.get("PRIMER_MIN_SIZE", 18)
+        if max(r[1] for r in ranges) < min_possible:
+            raise ValueError(f"PRIMER_PRODUCT_SIZE_RANGE max is below the minimum {min_possible}bp needed "
+                             f"to span a {seq_target_len}bp target.")
     else:
         assert job.end is not None
 
@@ -293,7 +316,7 @@ def run_job(job: Job, settings: Settings, fetch=fetch_sequence) -> Result:
             **job.p3_seq_tags,
         }
 
-    raw = primer_design(template, seq_tags, settings.p3_global_tags)
+    raw = primer_design(template, seq_tags, global_tags)
     return Result(job, parse_primer3_output(raw), raw["PRIMER_PAIR_EXPLAIN"])
 
 def build_parser() -> argparse.ArgumentParser:

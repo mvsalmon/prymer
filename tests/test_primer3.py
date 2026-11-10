@@ -1,7 +1,8 @@
 import pytest
 import primer3
 import re
-from prymer import parse_primer3_opts, parse_primer3_output, primer_design
+from pathlib import Path
+from prymer import parse_primer3_opts, parse_primer3_output, primer_design, run_job, Coordinate, Settings, Job
 
 
 def test_comma_range():
@@ -113,6 +114,30 @@ def test_design_primers_sends_template(monkeypatch):
 
     primer_design("AGCT", {"SEQUENCE_ID": "a"}, {})
     assert captured["SEQUENCE_TEMPLATE"] == "AGCT"
+
+def test_range_target_sets_product_size(monkeypatch):
+    captured = {}
+    def fake(seq_args, global_args):
+        captured.update(global_args)
+        return {"PRIMER_PAIR_EXPLAIN": "ok"}
+    monkeypatch.setattr(primer3, "design_primers", fake)
+
+    job = Job(name="t", start=Coordinate("chr1", 1000),
+              end=Coordinate("chr1", 1400), seq_len=300)
+    run_job(job, Settings("hg38", Path("."), {}), fetch=lambda url, timeout=10: "A" * 1000)
+    assert captured["PRIMER_PRODUCT_SIZE_RANGE"] == [436, 636] # 400 + 2*18, +200
+
+def test_user_range_overrides_default(monkeypatch):
+    captured = {}
+    def fake(seq_args, global_args):
+        captured.update(global_args)
+        return {"PRIMER_PAIR_EXPLAIN": "ok"}
+    monkeypatch.setattr(primer3, "design_primers", fake)
+
+    job = Job(name="t", start=Coordinate("chr1", 1000),
+              end=Coordinate("chr1", 1400), seq_len=300)
+    run_job(job, Settings("hg38", Path("."), {"PRIMER_PRODUCT_SIZE_RANGE": [500, 900]}), fetch=lambda url, timeout=10: "A" * 1000)
+    assert captured["PRIMER_PRODUCT_SIZE_RANGE"] == [500, 900]
 
 @pytest.mark.parametrize(
     "option",
