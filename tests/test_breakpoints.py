@@ -1,6 +1,6 @@
 import pytest
 from prymer import (Coordinate, reverse_complement, build_breakpoint, breakpoint_window, single_locus_window,
-                    single_chrom_range_window)
+                    single_chrom_range_window, default_product_size_range)
 
 ## Tests for breakpoint construction
 
@@ -47,3 +47,12 @@ def test_single_chrom_range_window():
     start = Coordinate("chr1", 10000)
     end = Coordinate("chr1", 10100)
     assert single_chrom_range_window(start, end, length=500) == ("chr1", 9500, 10600)
+
+@pytest.mark.parametrize(
+    "target_len, global_tags, expected",
+    [(100, {}, [136, 336]),
+    (300, {"PRIMER_MIN_SIZE": 20}, [340, 540]),
+    ]
+)
+def test_default_product_size_range(target_len, global_tags, expected):
+    assert default_product_size_range(target_len, global_tags) == expected
