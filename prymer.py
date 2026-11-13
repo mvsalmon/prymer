@@ -41,7 +41,7 @@ class Job:
             raise ValueError(
                 f"Template sequence start = {self.start.pos - self.seq_len}. Must be greater than 0; "
                 "try a shorter --template-sequence-length.")
-        if self.end.pos < self.start.pos and not self.sv:
+        if self.end is not None and not self.sv and self.end.pos < self.start.pos:
             raise ValueError(f"Start position {self.start.pos} falls after end position {self.end.pos}; "
                              f"start must be before end position for same chromosome jobs."  )
         if not self.sv and self.end is not None and self.start.chrom != self.end.chrom:
