@@ -66,7 +66,7 @@ prymer.py --start-coordinate "chr1:23,456" --end-coordinate "chr6:54,321" --fusi
   --p3-global-tags:  
     Specify additional primer3 global tags as a space separated list in the form "OPTION1_NAME=<value(s)>" "OPTION2_NAME=<value(s)>". 
     The version of primer3 used is 2.6.1. See https://htmlpreview.github.io/?https://github.com/primer3-org/primer3/blob/v2.6.1/src/primer3_manual.htm
-    for details of all options available.
+    for full details of all options available and required value syntax.
 
  --p3-sequence-tags:  
   Specify additional primer3 sequence tags as a space separated list in the form "OPTION1_NAME=<value(s)>" "OPTION2_NAME=<value(s)>".
