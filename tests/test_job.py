@@ -58,3 +58,7 @@ def test_main_returns_1_for_missing_output_dir(tmp_path):
 def test_negative_start():
     with pytest.raises(ValueError):
         Job(name="x", start=Coordinate("chr1", 200))
+
+def test_end_before_start():
+    with pytest.raises(ValueError):
+        Job(name="x", start=Coordinate("chr1", 10000), end=Coordinate("chr1", 9500))
