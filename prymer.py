@@ -8,6 +8,7 @@ import os
 import re
 import json
 from pathlib import Path
+from shutil import RegistryError
 from typing import Optional, Dict, NamedTuple, Tuple, Any
 from dataclasses import dataclass, field
 import requests
@@ -56,6 +57,7 @@ class Settings:
     ref_genome: str
     output_dir: Path
     p3_global_tags: dict
+    snp_track: str | None = None
 
 @dataclass(frozen=True)
 class Result:
@@ -222,7 +224,7 @@ def breakpoint_window(coordinate: Tuple[str, int], position: str, length: int) -
     raise ValueError(f"Invalid breakpoint position: {position}")
 
 def single_locus_window(coordinate: Tuple[str, int], length: int) -> Tuple[str, int, int]:
-    """Returns (chrom, start, end) window for single locus templates.
+    """Returns genomic (chrom, start, end) window for single locus templates.
     e.g. for a single coordinate 'chr1:1000' and length 500, we return ('chr1', 500, 1500)"""
     chrom, pos = coordinate
     return chrom, pos - length, pos + length
@@ -257,6 +259,56 @@ def build_breakpoint(start_seq: str, end_seq: str, rev_comp: str | None = None) 
     if rev_comp in ("end", "both"):
         end_seq = reverse_complement(end_seq)
     return start_seq + end_seq
+
+## SNP checks
+def build_UCSC_track_url(genome: str, track: str, chrom: str, start: int, end: int) -> str:
+    return(f"https://api.genome.ucsc.edu/getData/track?genome={genome};track={track};chrom={chrom};start={start};end={end}")
+
+def fetch_snps(url: str, track: str, timeout: int = 10) -> list[dict]:
+    """Fetch variant records from UCSC track for given region."""
+    try:
+        response = requests.get(url, timeout=timeout)
+        response.raise_for_status()
+    except requests.RequestException as err:
+        raise UCSCError(f"UCSC request failed: {err}") from err
+    return response.json().get(track, [])
+
+def merge_regions(regions: list[list[int]]) -> list[list[int]]:
+    """Merge overlapping or adjacent [start, length] variant regions.
+    Sort by start, then if then next region begins at or before the end of the
+    current one, extend the current one; otherwise start a new one"""
+    merged: list[list[int]] = []
+    for start, length in sorted(regions):
+        end = start + length
+        if merged and start <= merged[-1][0] + merged[-1][1]:
+            # prev is a reference to merged, so mutating prev also mutates merged
+            prev = merged[-1]
+            prev[1] = max(prev[0] + prev[1], end) - prev[0]
+        else: merged.append([start, length])
+    return merged
+
+def snp_exlusion_regions(records: list[dict], win_start: int, win_end: int) -> list[list[int]]:
+    """Convert UCSC variant records to merged template-relative [start, length] regions.
+    Output passed to primer3 SEQUENCE_EXCLUDED_REGIONS"""
+    regions = []
+    for rec in records:
+        snpStart, snpEnd = rec["chromStart"], rec["chromEnd"]
+        # handle 0-length insertions vars with flanking bp
+        if snpStart == snpEnd:
+            snpStart, snpEnd = snpStart - 1, snpEnd + 1
+        # clip variants that span template window edges
+        snpStart, snpEnd = max(snpStart, win_start), min(snpEnd, win_end)
+        if snpEnd > snpStart:
+            regions.append([snpStart - win_start, snpEnd - snpStart])
+    return merge_regions(regions)
+
+def add_excluded_regions(seq_tags: dict, regions: list[list[int]]) -> dict:
+    """Combine SNP regions with user-specified excluded regions"""
+    existing = seq_tags.get("SEQUENCE_EXCLUDED_REGION", [])
+    if existing and not isinstance(existing[0], list):
+        existing = [existing]
+    merged = merge_regions([*existing, *regions])
+    return {**seq_tags, "SEQUENCE_EXCLUDED_REGION": merged} if merged else seq_tags
 
 def run_job(job: Job, settings: Settings, fetch=fetch_sequence) -> Result:
     """Runs primer design job.
@@ -319,6 +371,17 @@ def run_job(job: Job, settings: Settings, fetch=fetch_sequence) -> Result:
             "SEQUENCE_TARGET": [max(0, junction - job.flank_bp), 2 * job.flank_bp],
             **job.p3_seq_tags,
         }
+    # SNP checks if asked for
+    if settings.snp_track:
+        if job.sv:
+            logger.warning("%s: SNP filtering not supported for SV jobs; skipping. "
+                           "Check primer binding regions for SNPS manually if needed.", job.name)
+        else:
+            _, win_start, win_end = template_win
+            url = build_UCSC_track_url(settings.ref_genome, settings.snp_track, *template_win)
+            records = fetch_snps(url, settings.snp_track)
+            seq_tags = add_excluded_regions(seq_tags, snp_exlusion_regions(records, win_start, win_end))
+            logger.info("%s: excluding %d SNP region(s)", job.name, len(seq_tags.get("SEQUENCE_EXCLUDED_REGION", [])))
 
     raw = primer_design(template, seq_tags, global_tags)
     return Result(job, parse_primer3_output(raw), raw["PRIMER_PAIR_EXPLAIN"])
@@ -388,6 +451,11 @@ def build_parser() -> argparse.ArgumentParser:
          The version of primer3 used is 2.6.1. See https://htmlpreview.github.io/?https://github.com/primer3-org/primer3/blob/v2.6.1/src/primer3_manual.htm
         for details of all options available.""",
     )
+    parser.add_argument(
+        "--snp-track", metavar="TRACK",
+        help="UCSC variant track, e.g. dbSnp155Common. If given, primers will not be placed over variants "
+             "in this track."
+    )
     return parser
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -416,7 +484,8 @@ def settings_from_args(args: argparse.Namespace) -> Settings:
     return Settings(
         ref_genome=args.reference_genome,
         output_dir=validate_output_path(args.output_path),
-        p3_global_tags=parse_primer3_opts(args.p3_global_tags)
+        p3_global_tags=parse_primer3_opts(args.p3_global_tags),
+        snp_track=args.snp_track,
     )
 
 def jobs_from_args(args: argparse.Namespace) -> list[Job]:
