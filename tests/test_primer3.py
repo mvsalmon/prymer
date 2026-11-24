@@ -2,7 +2,9 @@ import pytest
 import primer3
 import re
 from pathlib import Path
-from prymer import parse_primer3_opts, parse_primer3_output, primer_design, run_job, Coordinate, Settings, Job
+from prymer.p3 import parse_primer3_opts, parse_primer3_output, primer_design
+from prymer.pipeline import run_job
+from prymer.models import  Coordinate, Settings, Job
 
 
 def test_comma_range():

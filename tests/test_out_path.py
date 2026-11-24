@@ -1,7 +1,7 @@
 import os
 import sys
 import pytest
-from prymer import validate_output_path
+from prymer.output import validate_output_path
 
 def test_validiate_output_path_ok(tmp_path):
     assert validate_output_path(tmp_path) == tmp_path

@@ -1,7 +1,11 @@
 import pytest
 from pathlib import Path
-from prymer import (run_job, Job, Coordinate, Settings, Result, parse_args, jobs_from_args, build_UCSC_url,
-                    write_output, main)
+from prymer.pipeline import run_job
+from prymer.models import Coordinate, Job, Settings, Result
+from prymer.cli import parse_args, jobs_from_args, main
+from prymer.ucsc import build_ucsc_url
+from prymer.output import write_output
+
 
 
 def make_fake_fetch(responses: dict[str, str]):
@@ -16,8 +20,8 @@ def test_run_job_fusion(dummy_response_sequence):
               end_primer_position="3")
     settings = Settings("hg38", Path("."), {})
     fake = make_fake_fetch({
-        build_UCSC_url("hg38", "chr1", 500, 1000): seq[2500:3000],
-        build_UCSC_url("hg38", "chr1", 5000, 5500): seq[3500:4000],
+        build_ucsc_url("hg38", "chr1", 500, 1000): seq[2500:3000],
+        build_ucsc_url("hg38", "chr1", 5000, 5500): seq[3500:4000],
     })
     result = run_job(job, settings, fetch=fake)
     assert result.job is job

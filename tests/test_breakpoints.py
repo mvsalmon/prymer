@@ -1,6 +1,8 @@
 import pytest
-from prymer import (Coordinate, reverse_complement, build_breakpoint, breakpoint_window, single_locus_window,
-                    single_chrom_range_window, default_product_size_range)
+from prymer.models import Coordinate
+from prymer.sequence import reverse_complement, build_breakpoint
+from prymer.coordinates import breakpoint_window, single_locus_window, single_chrom_range_window
+from prymer.p3 import default_product_size_range
 
 ## Tests for breakpoint construction
 

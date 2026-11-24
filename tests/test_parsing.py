@@ -1,5 +1,5 @@
 import pytest
-from prymer import parse_coordinates
+from prymer.coordinates import parse_coordinates
 
 def test_parse_simple_coordinates():
     assert parse_coordinates("chr1:123456") == ("chr1", 123456)
