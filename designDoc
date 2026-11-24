@@ -1,6 +1,6 @@
 Primer design helper program with support for multiple designs in one run.
 
-Settings: ref. genome, output directory, primer3 global tags. Generally same across jobs, but can be changed.
+Settings: ref. genome, output directory, primer3 global tags.
 Job: One design request - coordinates, fusion or not, primer positions, rev-comp, name...
 Result: The output for one job - parsed primer pairs (+ explain string), or error.
 
