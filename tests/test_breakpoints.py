@@ -1,0 +1,60 @@
+import pytest
+from prymer.models import Coordinate
+from prymer.sequence import reverse_complement, build_breakpoint
+from prymer.coordinates import breakpoint_window, single_locus_window, single_chrom_range_window
+from prymer.p3 import default_product_size_range
+
+## Tests for breakpoint construction
+
+def test_reverse_complement(sample_template_4bp):
+    assert reverse_complement(sample_template_4bp) == "GCAT"
+
+@pytest.mark.parametrize(
+    "rev_comp, expected",
+    [
+        (None, "AAAACCCC"),
+        ("start", "TTTTCCCC"),
+        ("end", "AAAAGGGG"),
+        ("both", "TTTTGGGG")
+    ]
+)
+def test_build_breakpoint(rev_comp, expected, start="AAAA", end="CCCC"):
+    assert build_breakpoint(start, end, rev_comp
+                            ) == expected
+
+def test_breakpoint_no_revcomp(sample_template_4bp,
+                               sample_template2_4bp):
+    assert build_breakpoint(sample_template_4bp,
+                            sample_template2_4bp) == "ATGCGCAT"
+
+
+@pytest.mark.parametrize(
+    "position, expected",
+    [("5", ("chr1", 500, 1000)),
+     ("3", ("chr1", 1000, 1500))]
+)
+def test_breakpoint_window(position, expected):
+    assert breakpoint_window(("chr1", 1000), position, 500) == expected
+
+@pytest.mark.parametrize(
+    "coordinate, length, expected",
+    [(("chr1", 1000), 500, ("chr1", 500, 1500)),
+     (("chr15", 10000), 500, ("chr15", 9500, 10500))]
+)
+
+def test_single_locus_window(coordinate, length, expected):
+    assert single_locus_window(coordinate, length) == expected
+
+def test_single_chrom_range_window():
+    start = Coordinate("chr1", 10000)
+    end = Coordinate("chr1", 10100)
+    assert single_chrom_range_window(start, end, length=500) == ("chr1", 9500, 10600)
+
+@pytest.mark.parametrize(
+    "target_len, global_tags, expected",
+    [(100, {}, [136, 336]),
+    (300, {"PRIMER_MIN_SIZE": 20}, [340, 540]),
+    ]
+)
+def test_default_product_size_range(target_len, global_tags, expected):
+    assert default_product_size_range(target_len, global_tags) == expected
