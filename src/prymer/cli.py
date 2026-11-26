@@ -125,9 +125,6 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         parser.error("--reverse_complement only allowed with --sv-breakpoint.")
     if args.template_sequence_length < 1:
         parser.error("--template_sequence_length must be a positive integer.")
-    if args.start_coordinate and args.end_coordinate and args.sv_breakpoint is None:
-        # Catch this for now, want to implement a range input later
-        parser.error("Using --start-coordinate and --end-coordinate together requires --sv-breakpoint.")
 
     # Check for primer3 params file
     args.p3_file_global = {}
