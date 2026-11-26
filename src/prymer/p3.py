@@ -1,6 +1,8 @@
 """Primer design and related functions"""
 
+import json
 import logging
+from pathlib import Path
 import re
 from typing import Any
 
@@ -8,6 +10,8 @@ import primer3
 
 # regex for primer3 output parsing
 P3_KEY = re.compile(r"PRIMER_(?P<kind>LEFT|RIGHT|PAIR|INTERNAL)_(?P<idx>\d+)(?:_(?P<field>.+))?")
+# primer3 config file expected sections. Add sequence tags later?
+P3_CONFIG_SECTIONS = {"global_tags"}
 
 logger = logging.getLogger(__name__)
 
@@ -39,10 +43,40 @@ def default_product_size_range(target_len: int, global_tags: dict, slack_bp: int
     lower = target_len + 2 * min_primer
     return [lower, lower + 2 * slack_bp]
 
+def load_primer3_config(path: Path) -> dict[str, Any]:
+    """Load primer3 configuration from file.
+    Expected structure {"global_tags": {...}}.
+    Parameters:
+        path: Path to primer3 configuration file.
+    Returns:
+        global_tags: Dictionary of primer3 global tag:value pairs."""
+    with open(path) as f:
+        try:
+            data = json.load(f)
+        except json.decoder.JSONDecodeError as err:
+            raise ValueError(f"{path} is not a valid JSON file.") from err
+
+    if not isinstance(data, dict):
+        raise ValueError(f"{path}: top level must be a valid object with 'global_tags' key.")
+    unknown = set(data) - P3_CONFIG_SECTIONS
+    if unknown:
+        raise ValueError(f"{path}: unknown section(s): {sorted(unknown)};"
+                         f"supported: {sorted(P3_CONFIG_SECTIONS)}.")
+    global_tags = data.get("global_tags", {})
+    if not isinstance(global_tags, dict):
+        raise ValueError(f"{path}: 'global_tags' must be a dictionary object of TAG: value pairs.")
+
+    if len(global_tags) == 0:
+        raise ValueError(f"{path}: global_tags must not be empty. "
+                         f"Add configurations or re-run without specifying --p3-params.")
+
+    return global_tags
+
 def parse_primer3_opts(p3_opts: list) -> dict[str, Any]:
     """Parse inputs for primer3 global and sequence tags and return a dictionary containing primer3 options with
     appropriate formatting: Ranges should be converted to a list, lists of ranges to lists of lists.
-    each option should be in the format 'TAG=VALUE'.
+    each option should be in the format 'TAG=VALUE' Don't need to validate arguments here as primer3 will complain about
+    invalid options.
     Parameters:
         p3_opts: list of p3 tag:value pairs.
     Returns:

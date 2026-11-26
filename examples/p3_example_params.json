@@ -1,0 +1,7 @@
+{
+  "global_tags": {
+    "PRIMER_OPT_TM": 60.0,
+    "PRIMER_MIN_SIZE": 18,
+    "PRIMER_PRODUCT_SIZE_RANGE": [[100, 300], [400, 500]]
+  }
+}

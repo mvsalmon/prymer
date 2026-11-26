@@ -8,7 +8,7 @@ from prymer.coordinates import parse_coordinates
 from prymer.exceptions import UCSCError
 from prymer.models import Coordinate, Job, Settings
 from prymer.output import validate_output_path, write_outputs
-from prymer.p3 import parse_primer3_opts
+from prymer.p3 import parse_primer3_opts, load_primer3_config
 from prymer.pipeline import run_job
 from prymer.ucsc import fetch_sequence
 
@@ -94,6 +94,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="UCSC variant track, e.g. dbSnp155Common. If given, primers will not be placed over variants "
              "in this track."
     )
+    parser.add_argument(
+        "--p3-config", type=Path, metavar="FILE",
+        help="Path to JSON file containing preset primer3 global tag configuration options."
+             "Options given with --p3-global-tags will override those in the file."
+             " See p3_example_params.json for the required file structure."
+    )
     return parser
 
 def coordinate_arg(text: str) -> Coordinate:
@@ -122,6 +128,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     if args.start_coordinate and args.end_coordinate and args.sv_breakpoint is None:
         # Catch this for now, want to implement a range input later
         parser.error("Using --start-coordinate and --end-coordinate together requires --sv-breakpoint.")
+
+    # Check for primer3 params file
+    args.p3_file_global = {}
+    if args.p3_config:
+        try:
+            args.p3_file_global = load_primer3_config(args.p3_config)
+        except (OSError, ValueError) as err:
+            parser.error(str(err))
+
     return args
 
 def settings_from_args(args: argparse.Namespace) -> Settings:
@@ -129,7 +144,7 @@ def settings_from_args(args: argparse.Namespace) -> Settings:
     return Settings(
         ref_genome=args.reference_genome,
         output_dir=validate_output_path(args.output_path),
-        p3_global_tags=parse_primer3_opts(args.p3_global_tags),
+        p3_global_tags={**args.p3_file_global, **parse_primer3_opts(args.p3_global_tags)},
         snp_track=args.snp_track,
     )
 
