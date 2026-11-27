@@ -19,7 +19,9 @@ DEFAULTS = {
     "output_path": "./",
     "breakpoint_flanking_bp": 50,
     "start_primer_position": "5",
-    "end_primer_position": "3"
+    "end_primer_position": "3",
+    "snp_freq": 0.01,
+    "maf_source": "GnomAD",
 }
 
 logger = logging.getLogger(__name__)
@@ -91,8 +93,18 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--snp-track", metavar="TRACK",
-        help="UCSC variant track, e.g. dbSnp155Common. If given, primers will not be placed over variants "
+        help="UCSC dbSNP track, e.g. dbSnp155Common. If given, primers will not be placed over variants "
              "in this track."
+    )
+    parser.add_argument(
+        "--snp-freq-cutoff", type=float, default=DEFAULTS["snp_freq"],
+        help="If --snp-track is specified, SNPs in variant track with a frequency below this level will be ignored, and may be included"
+             "in the primer binding region."
+    )
+    parser.add_argument(
+        "--maf-source", type=str, nargs="*",
+        help="Define 1 or more sources for the dbSNP MAF value, as specified with --snp-maf-cutoff. If no source is given, "
+             "a SNP will be excluded from primer regions if the MAF from any source is above the cutoff level (default 0.01). "
     )
     parser.add_argument(
         "--p3-config", type=Path, metavar="FILE",

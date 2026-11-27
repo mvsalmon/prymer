@@ -1,4 +1,6 @@
-"""Functions for checking template region for SNPs"""
+"""Functions related to checking template region for SNPs"""
+
+from pathlib import Path
 
 
 def merge_regions(regions: list[list[int]]) -> list[list[int]]:
@@ -37,3 +39,15 @@ def add_excluded_regions(seq_tags: dict, regions: list[list[int]]) -> dict:
         existing = [existing]
     merged = merge_regions([*existing, *regions])
     return {**seq_tags, "SEQUENCE_EXCLUDED_REGION": merged} if merged else seq_tags
+
+def load_maf_manifest(path: Path) -> list[str]:
+    """Load contents of MAF manifest file. This contains the sources of MAF values contained in the UCSC
+    dbSNP155 track, in the order they appear.
+    Parameters:
+        path: Path to MAF manifest file
+    Returns:
+        List containing the MAF value sources."""
+    with open(path, "r") as f:
+        return [line.rstrip('\n')
+                for line in f
+                if not line.lstrip().startswith("#")]
