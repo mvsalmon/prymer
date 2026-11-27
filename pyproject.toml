@@ -23,6 +23,9 @@ prymer = "prymer.cli:main"
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+prymer = ["data/*.txt"]
+
 [tool.pytest.ini_options]
 testpaths=["tests"]
 addopts = "--strict-markers"

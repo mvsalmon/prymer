@@ -1,7 +1,24 @@
 """Functions related to checking template region for SNPs"""
 
+from importlib.resources import files
 from pathlib import Path
 
+
+def load_maf_manifest(path: Path | None = None) -> list[str]:
+    """Load contents of MAF manifest file. This contains the sources of MAF values contained in the UCSC
+    dbSNP155 track, in the order they appear.
+    Parameters:
+        path: Path to MAF manifest file
+    Returns:
+        List containing the MAF value sources."""
+    if path is None:
+        text = (files("prymer") / "data" / "MAF.txt").read_text(encoding="utf-8")
+    else:
+        text = Path(path).read_text(encoding="utf-8")
+    return [
+        line.rstrip('\n')
+        for line in text.splitlines()
+        if line.strip() and not line.lstrip().startswith("#")]
 
 def merge_regions(regions: list[list[int]]) -> list[list[int]]:
     """Merge overlapping or adjacent [start, length] variant regions.
@@ -40,14 +57,3 @@ def add_excluded_regions(seq_tags: dict, regions: list[list[int]]) -> dict:
     merged = merge_regions([*existing, *regions])
     return {**seq_tags, "SEQUENCE_EXCLUDED_REGION": merged} if merged else seq_tags
 
-def load_maf_manifest(path: Path) -> list[str]:
-    """Load contents of MAF manifest file. This contains the sources of MAF values contained in the UCSC
-    dbSNP155 track, in the order they appear.
-    Parameters:
-        path: Path to MAF manifest file
-    Returns:
-        List containing the MAF value sources."""
-    with open(path, "r") as f:
-        return [line.rstrip('\n')
-                for line in f
-                if not line.lstrip().startswith("#")]
