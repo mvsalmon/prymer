@@ -66,3 +66,15 @@ def test_negative_start():
 def test_end_before_start():
     with pytest.raises(ValueError):
         Job(name="x", start=Coordinate("chr1", 10000), end=Coordinate("chr1", 9500))
+
+def test_snp_freq_requires_track(capsys):
+    with pytest.raises(SystemExit) as exc:
+        parse_args(["-s", "chr1:10000", "--snp-freq-cutoff", "0.01"])
+        assert exc.value.code == 2
+        assert "--snp-freq-cutoff" in capsys.readouterr().err
+
+def test_maf_source_requires_track(capsys):
+    with pytest.raises(SystemExit) as exc:
+        parse_args(["-s", "chr1:10000", "--maf-source" "GnomAD"])
+        assert exc.value.code == 2
+        assert "--maf-source" in capsys.readouterr().err

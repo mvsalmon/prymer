@@ -20,8 +20,7 @@ DEFAULTS = {
     "breakpoint_flanking_bp": 50,
     "start_primer_position": "5",
     "end_primer_position": "3",
-    "snp_freq": 0.01,
-    "maf_source": "GnomAD",
+    "snp_freq": 0.01
 }
 
 logger = logging.getLogger(__name__)
@@ -92,19 +91,20 @@ def build_parser() -> argparse.ArgumentParser:
         for details of all options available.""",
     )
     parser.add_argument(
-        "--snp-track", metavar="TRACK",
-        help="UCSC dbSNP track, e.g. dbSnp155Common. If given, primers will not be placed over variants "
-             "in this track."
+        "--snp-track", type=str,
+        help="UCSC dbSNP track, e.g. dbSnp155Common. If set, primers will not be placed over variants "
+             "present in this track. Can be used with --snp-freq-cutoff."
     )
     parser.add_argument(
-        "--snp-freq-cutoff", type=float, default=DEFAULTS["snp_freq"],
+        "--snp-freq-cutoff", type=float, default=None,
         help="If --snp-track is specified, SNPs in variant track with a frequency below this level will be ignored, and may be included"
-             "in the primer binding region."
+             "in the primer binding region. Must be used in conjunction with --snp-track (default: 0.01)."
     )
     parser.add_argument(
-        "--maf-source", type=str, nargs="*",
+        "--maf-source", type=str, nargs="*", default=None,
         help="Define 1 or more sources for the dbSNP MAF value, as specified with --snp-maf-cutoff. If no source is given, "
-             "a SNP will be excluded from primer regions if the MAF from any source is above the cutoff level (default 0.01). "
+             "a SNP will be excluded from primer regions if the MAF from any source is above the cutoff level (default 0.01)."
+             "Must be used in conjunction with --snp-track"
     )
     parser.add_argument(
         "--p3-config", type=Path, metavar="FILE",
@@ -138,6 +138,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     if args.template_sequence_length < 1:
         parser.error("--template_sequence_length must be a positive integer.")
 
+    # SNP checks
+    if args.snp_freq_cutoff is not None and args.snp_track is None:
+        parser.error("--snp-freq-cutoff only allowed with --snp-track.")
+    if args.maf_source is not None and args.snp_track is None:
+        parser.error("--maf-source only allowed with --snp-track.")
+    if args.snp_track and args.snp_freq_cutoff is None:
+        args.snp_freq_cutoff = DEFAULTS["snp_freq_cutoff"]
+
     # Check for primer3 params file
     args.p3_file_global = {}
     if args.p3_config:
@@ -155,6 +163,8 @@ def settings_from_args(args: argparse.Namespace) -> Settings:
         output_dir=validate_output_path(args.output_path),
         p3_global_tags={**args.p3_file_global, **parse_primer3_opts(args.p3_global_tags)},
         snp_track=args.snp_track,
+        snp_freq_cutoff=args.snp_freq_cutoff,
+        maf_source=args.maf_source
     )
 
 def jobs_from_args(args: argparse.Namespace) -> list[Job]:
