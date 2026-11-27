@@ -1,0 +1,12 @@
+# SNP checks
+
+if snp freq in GnomAD | GnomAD_exome > 0.001:
+    exclude snp from primer
+
+- manifest list for order sources of MAF values
+
+add freq cutoff option (default 0.01)
+add ability to specify source of MAF
+
+with open("src/prymer/data/MAF.txt", "r") as f:
+    lines = [line.rstrip('\n') for line in f.readlines() if not line.lstrip().startswith("#")]
