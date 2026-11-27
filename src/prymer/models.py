@@ -47,7 +47,8 @@ class Settings:
     p3_global_tags: dict
     snp_track: str | None = None
     snp_freq_cutoff: float | None = None
-    maf_source: str | None = None
+    maf_source: list[str] | None = None
+    maf_manifest: tuple[str, ...] | None = None
 
 @dataclass(frozen=True)
 class Result:

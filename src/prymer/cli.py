@@ -10,6 +10,7 @@ from prymer.models import Coordinate, Job, Settings
 from prymer.output import validate_output_path, write_outputs
 from prymer.p3 import parse_primer3_opts, load_primer3_config
 from prymer.pipeline import run_job
+from prymer.snps import load_maf_manifest
 from prymer.ucsc import fetch_sequence
 
 # Argument defaults
@@ -20,7 +21,8 @@ DEFAULTS = {
     "breakpoint_flanking_bp": 50,
     "start_primer_position": "5",
     "end_primer_position": "3",
-    "snp_freq_cutoff": 0.01
+    "snp_freq_cutoff": 0.01,
+    "maf_source": "Any"
 }
 
 logger = logging.getLogger(__name__)
@@ -143,8 +145,23 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         parser.error("--snp-freq-cutoff only allowed with --snp-track.")
     if args.maf_source is not None and args.snp_track is None:
         parser.error("--maf-source only allowed with --snp-track.")
-    if args.snp_track and args.snp_freq_cutoff is None:
-        args.snp_freq_cutoff = DEFAULTS["snp_freq_cutoff"]
+
+    # Default: no snp check
+    args.maf_manifest = None
+
+    if args.snp_track:
+        if args.snp_freq_cutoff is None:
+            args.snp_freq_cutoff = DEFAULTS["snp_freq_cutoff"]
+
+    if args.maf_source:
+        manifest = load_maf_manifest()
+        unknown = [s for s in args.maf_source if s not in manifest]
+        if unknown:
+            parser.error(f"Unknown MAF source(s): {', '.join(unknown)}. "
+                         "Run with --list-maf-sources for valid options.")
+        args.maf_manifest = manifest
+    else:
+        args.maf_source = None
 
     # Check for primer3 params file
     args.p3_file_global = {}
@@ -164,7 +181,8 @@ def settings_from_args(args: argparse.Namespace) -> Settings:
         p3_global_tags={**args.p3_file_global, **parse_primer3_opts(args.p3_global_tags)},
         snp_track=args.snp_track,
         snp_freq_cutoff=args.snp_freq_cutoff,
-        maf_source=args.maf_source
+        maf_source=args.maf_source,
+        maf_manifest=tuple(args.maf_manifest) if args.maf_manifest else None,
     )
 
 def jobs_from_args(args: argparse.Namespace) -> list[Job]:
