@@ -20,7 +20,7 @@ DEFAULTS = {
     "breakpoint_flanking_bp": 50,
     "start_primer_position": "5",
     "end_primer_position": "3",
-    "snp_freq": 0.01
+    "snp_freq_cutoff": 0.01
 }
 
 logger = logging.getLogger(__name__)

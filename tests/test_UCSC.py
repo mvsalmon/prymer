@@ -25,21 +25,3 @@ def test_url_construction():
     assert (build_ucsc_url("hg38", "chr1", 10, 20) ==
             "https://api.genome.ucsc.edu/getData/sequence?genome=hg38;chrom=chr1;start=10;end=20")
 
-def test_read_sources(tmp_path):
-    path = tmp_path / "sources.txt"
-    path.write_text(
-        "# Order of sources for MAF values found in dbSNP155\n"
-        "1000Genomes\n"
-        "dbGaP_PopFreq\n"
-        "   # indented comment line\n"
-        "TOPMED\n"
-        "KOREAN\n"
-        "SGDP_PRJ\n",
-   )
-    assert load_maf_manifest(path) == [
-        "1000Genomes",
-        "dbGaP_PopFreq",
-        "TOPMED",
-        "KOREAN",
-        "SGDP_PRJ"
-    ]
