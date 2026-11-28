@@ -95,12 +95,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--snp-track", type=str,
         help="UCSC dbSNP track, e.g. dbSnp155Common. If set, primers will not be placed over variants "
-             "present in this track. Can be used with --snp-freq-cutoff."
+             "present in this track. Can be used with --maf-threshold."
     )
     parser.add_argument(
-        "--snp-freq-cutoff", type=float, default=None,
-        help="If --snp-track is specified, SNPs in variant track with a frequency below this level will be ignored, and may be included"
-             "in the primer binding region. Must be used in conjunction with --snp-track (default: 0.01)."
+        "--maf-threshold", type=float, default=0.1,
+        help="If --snp-track is specified, SNPs in variant track with a MAF below this value will be ignored, and may be included"
+             "in the primer binding region. Must be used in conjunction with --snp-track. (default: 0.01)."
     )
     parser.add_argument(
         "--maf-source", type=str, nargs="*", default=None,
@@ -141,8 +141,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         parser.error("--template_sequence_length must be a positive integer.")
 
     # SNP checks
-    if args.snp_freq_cutoff is not None and args.snp_track is None:
-        parser.error("--snp-freq-cutoff only allowed with --snp-track.")
+    if args.maf_threshold is not None and args.snp_track is None:
+        parser.error("--maf-threshold only allowed with --snp-track.")
     if args.maf_source is not None and args.snp_track is None:
         parser.error("--maf-source only allowed with --snp-track.")
 
@@ -150,8 +150,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     args.maf_manifest = None
 
     if args.snp_track:
-        if args.snp_freq_cutoff is None:
-            args.snp_freq_cutoff = DEFAULTS["snp_freq_cutoff"]
+        if args.maf_threshold is None:
+            args.maf_threshold = DEFAULTS["snp_freq_cutoff"]
 
     if args.maf_source:
         manifest = load_maf_manifest()
@@ -180,7 +180,7 @@ def settings_from_args(args: argparse.Namespace) -> Settings:
         output_dir=validate_output_path(args.output_path),
         p3_global_tags={**args.p3_file_global, **parse_primer3_opts(args.p3_global_tags)},
         snp_track=args.snp_track,
-        snp_freq_cutoff=args.snp_freq_cutoff,
+        maf_threshold=float(args.maf_threshold),
         maf_source=args.maf_source,
         maf_manifest=tuple(args.maf_manifest) if args.maf_manifest else None,
     )

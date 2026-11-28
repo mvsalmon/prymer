@@ -1,8 +1,15 @@
 """Functions related to checking template region for SNPs"""
-
+import logging
 from importlib.resources import files
 from pathlib import Path
 
+from prymer.models import Settings
+
+logger = logging.getLogger(__name__)
+
+def _maf_source_index(maf_source: str, maf_manifest: tuple[str, ...]) -> int:
+    """Returns the index of the MAF source in MAF manifest"""
+    return maf_manifest.index(maf_source)
 
 def load_maf_manifest(path: Path | None = None) -> list[str]:
     """Load contents of MAF manifest file. This contains the sources of MAF values contained in the UCSC
@@ -20,6 +27,34 @@ def load_maf_manifest(path: Path | None = None) -> list[str]:
         for line in text.splitlines()
         if line.strip() and not line.lstrip().startswith("#")]
 
+
+def check_maf_threshold(var_record: dict,
+              maf_threshold: float,
+              maf_manifest: tuple[str, ...] | None = None,
+              maf_source: list[str] | None = None,
+              ) -> bool:
+    """Check MAF from specified source against threshold cutoff. Returns True if the MAF is above the threshold
+    and should be excluded from primer design. Otherwise, return False."""
+    mafs = var_record.get("minorAlleleFreq", [])
+    # Decide what to do for missing maf data. Ignore position for now - low evidence for true SNP.
+    if not mafs:
+        logger.warning(f"No MAF data found for {var_record['name']}. Variant class is {var_record['class']}. Position will be included.")
+        return False
+    # MAF values are comma separated in a single string and have a trailing comma - split and convert to tuple of floats
+    mafs = tuple(float(x) for x in mafs.split(',') if x.strip())
+    if maf_source is None:
+        # True if any value in mafs > threshold when no specific source given.
+        return any(float(maf) > maf_threshold for maf in mafs)
+
+    # True if maf > threshold in any source
+    # Update this to show which source and MAF were above threshold at some point.
+    maf_indices = [_maf_source_index(source, maf_manifest) for source in maf_source]
+    if any(float(mafs[i]) > maf_threshold for i in maf_indices):
+        logger.info(f"MAF for {var_record['name']} above threshold. Position will be excluded.")
+        return True
+    else:
+        return False
+
 def merge_regions(regions: list[list[int]]) -> list[list[int]]:
     """Merge overlapping or adjacent [start, length] variant regions.
     Sort by start, then if then next region begins at or before the end of the
@@ -34,11 +69,14 @@ def merge_regions(regions: list[list[int]]) -> list[list[int]]:
         else: merged.append([start, length])
     return merged
 
-def snp_exclusion_regions(records: list[dict], win_start: int, win_end: int) -> list[list[int]]:
+def snp_exclusion_regions(records: list[dict], win_start: int, win_end: int, settings: Settings) -> list[list[int]]:
     """Convert UCSC variant records to merged template-relative [start, length] regions.
     Output passed to primer3 SEQUENCE_EXCLUDED_REGIONS"""
     regions = []
     for rec in records:
+        # Ignore SNP if MAF below threshold
+        if not check_maf_threshold(rec, settings.maf_threshold, settings.maf_manifest, settings.maf_source):
+            continue
         snp_start, snp_end = rec["chromStart"], rec["chromEnd"]
         # handle 0-length insertions vars with flanking bp
         if snp_start == snp_end:

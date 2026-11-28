@@ -85,7 +85,7 @@ def run_job(job: Job, settings: Settings, fetch=fetch_sequence) -> Result:
             _, win_start, win_end = template_win
             url = build_ucsc_track_url(settings.ref_genome, settings.snp_track, *template_win)
             records = fetch_snps(url, settings.snp_track)
-            seq_tags = add_excluded_regions(seq_tags, snp_exclusion_regions(records, win_start, win_end))
+            seq_tags = add_excluded_regions(seq_tags, snp_exclusion_regions(records, win_start, win_end, settings))
             logger.info("%s: excluding %d SNP region(s)", job.name, len(seq_tags.get("SEQUENCE_EXCLUDED_REGION", [])))
 
     raw = primer_design(template, seq_tags, global_tags)

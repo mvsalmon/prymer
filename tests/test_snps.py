@@ -40,7 +40,7 @@ def test_manifest_not_loaded_for_any_source():
     args = parse_args(["-s", "chr1:10000", "--snp-track", "dbSnp155"])
     assert args.maf_manifest is None
     assert args.maf_source is None
-    assert args.snp_freq_cutoff == 0.01
+    assert args.maf_threshold == 0.01
 
 def test_manifest_loaded_for_named_source():
     args = parse_args(["-s", "chr1:10000", "--snp-track", "dbSnp155",
@@ -50,4 +50,4 @@ def test_manifest_loaded_for_named_source():
 def test_cutoff_default_applies_with_maf_source():
     args = parse_args(["-s", "chr1:10000", "--snp-track", "dbSnp155",
                        "--maf-source", "GnomAD"])
-    assert args.snp_freq_cutoff == 0.01
+    assert args.maf_threshold == 0.01

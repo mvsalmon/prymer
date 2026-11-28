@@ -46,7 +46,7 @@ class Settings:
     output_dir: Path
     p3_global_tags: dict
     snp_track: str | None = None
-    snp_freq_cutoff: float | None = None
+    maf_threshold: float = 0.1
     maf_source: list[str] | None = None
     maf_manifest: tuple[str, ...] | None = None
 
